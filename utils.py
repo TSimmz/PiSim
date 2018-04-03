@@ -5,6 +5,13 @@
 # functionality and to keep code clean
 ###########################################
 class Utils(object):
-    
-    pass
+    i = 0
+
+    ###########################################
+    # sends initialization status messages
+    ###########################################
+    def initialize():
+        pass
+
+
 

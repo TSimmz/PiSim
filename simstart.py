@@ -44,7 +44,7 @@ def output(threadname):
 #   initialize child threads
 ###########################################
 def main():
-    
+    # add eventlisten
     # add functionality to only start threads once motion&control button enabled
     
     input_thread = Thread(target=input, args=("input_thread",))
