@@ -1,5 +1,6 @@
 #!/usr/bin/python
-import serial
+from utils import Utils
+from serial import Serial
 from threading import Thread
 
 ###########################################
