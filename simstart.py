@@ -31,7 +31,8 @@ def input(threadname):
     
     print("Starting input thread...")
     while True:
-        
+
+        pygame.event.pump()
         joystick_count = pygame.joystick.get_count()
         
         for i in range(joystick_count):
