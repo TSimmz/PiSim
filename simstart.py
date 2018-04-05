@@ -29,26 +29,30 @@ def input(threadname):
     clock = pygame.time.Clock()
     pygame.joystick.init()
     
+        
+    joystick = pygame.joystick.Joystick(0)
+    joystick.init()
+    
+    axes = joystick.get_numaxes()
+        
     print("Starting input thread...")
     while True:
 
         pygame.event.pump()
-        joystick_count = pygame.joystick.get_count()
+
         
-        for i in range(joystick_count):
-            joystick = pygame.joystick.Joystick(i)
-            joystick.init()
+        for i in range( axes ):
+            axis = joystick.get_axis(i)
             
-            axes = joystick.get_numaxes()
-            for i in range( axes ):
-                axis = joystick.get_axis(i)
-                if i == 0:
-                    r = float(axis)
-                elif i == 1:
-                    p = float(axis)
-                elif i == 3:
-                    y == float(axis)
-        #clock.tick(60)
+            if i == 0:
+                r = axis:
+            elif i == 1:
+                p = axis
+            elif i == 3:
+                y = axis
+                    
+        #print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
+        clock.tick(20)
 
 
 ###########################################
@@ -60,7 +64,7 @@ def output(threadname):
     print("Starting output thread...")
     
     while True:
-        print("Pitch: {}  Roll: {}  Yaw:{}".format(p, r, y))
+        print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
           
 
     #set up output serial port to output positional information to arduino
@@ -78,17 +82,20 @@ def main():
     # add functionality to only start threads once motion&control button enabled
     
     input_thread = Thread(target=input, args=("input_thread",))
-    output_thread = Thread(target=output, args=("output_thread",))
+    #output_thread = Thread(target=output, args=("output_thread",))
     
     input_thread.start()
-    output_thread.start()
-    i = 0
-    while True:
-        i = i+1
-        
-        if i==1000:
-            i = 0
+    #output_thread.start()
+    
+##    i = 0
+##    while True:
+##        i = i+1
+##        
+##        if i==1000:
+##            i = 0
 
+    while True:
+        print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
 
 
     
