@@ -45,7 +45,7 @@ def input(threadname):
             axis = joystick.get_axis(i)
             
             if i == 0:
-                r = axis:
+                r = axis
             elif i == 1:
                 p = axis
             elif i == 3:
@@ -95,7 +95,8 @@ def main():
 ##            i = 0
 
     while True:
-        print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
+        #print "Hello"
+	print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
 
 
     
