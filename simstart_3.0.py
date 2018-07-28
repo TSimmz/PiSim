@@ -35,9 +35,9 @@ pwm.set_pwm_freq(60)
 servo_list = []
 for i in range(6):
 	if i % 2 == 0:
-		servo = Servo(pwm, servo_min, servo_max, True)
-	else:
 		servo = Servo(pwm, servo_min, servo_max, False)
+	else:
+		servo = Servo(pwm, servo_min, servo_max, True)
 
 	servo_list.append(servo)
 
