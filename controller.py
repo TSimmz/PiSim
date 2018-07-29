@@ -92,10 +92,18 @@ class Controller:
 		
 		# Iterate over the joystick devices.
 		print('Available devices:')
-
+		
+		found = False
 		for fn in os.listdir('/dev/input'):
 		    if fn.startswith('js'):
-		        print('  /dev/input/%s' % (fn))
+		        #print('  /dev/input/%s' % (fn))
+				found = True
+		
+		if not found:
+			print("No input detected")
+			return False
+		else:
+			print("Input detected in /dev/input")
 
 		# Open the joystick device.
 		fn = '/dev/input/js0'
@@ -138,7 +146,8 @@ class Controller:
 
 		print '%d axes found: %s' % (num_axes, ', '.join(self.axis_map))
 		print '%d buttons found: %s' % (num_buttons, ', '.join(self.button_map))
-	
+		return True
+		
 	def read_input(self):
 		
 		evbuf = self.jsdev.read(8)
