@@ -30,19 +30,21 @@ SERVO_MAX = 600  # Max pulse length out of 4096
 ###########################################
 # Create PWM object to drive servos
 ###########################################
-pwm = Adafruit_PCA9685.PCA9685()
+PWM = Adafruit_PCA9685.PCA9685()
 
 ###########################################
 # Create Controller object
 ###########################################
-ds4 = Controller()
+DS4 = Controller()
 
 ###########################################
 # Set frequency to 60hz, good for servos.
 ###########################################
-pwm.set_pwm_freq(60)
+PWM.set_pwm_freq(60)
 
-
+###########################################
+# List of servos
+###########################################
 servo_list = []
 
 ###########################################
@@ -84,7 +86,7 @@ Z_HOME = 4.05
 RD = 2.42
 # Distance from center of base to center of servo rotation points
 PD = 2.99
-# Angle between tow servo axis points
+# Angle between two servo axis points
 THETA_P = mt.radians(37.5)
 # Angle between platform attachment points
 THETA_R = mt.radians(8)
@@ -120,15 +122,138 @@ R = np.array((
 	int(-RD * mt.cos(DEG30 - THETA_R/2))],
 	[0,0,0,0,0,0]))
 	
+# Arrays used for servo rotation calculation
+M = np.zeros((3,3))
+RXP = np.zeros((3,6))
+T = np.zeros(3)
+# Center position of platform
+H = np.array([0, 0, Z_HOME])
 
+###########################################
+# Helper function to calculate needed servo
+#  rotation value
+###########################################
+def GetAlpha(i):
+	n = 0
+	th = 0.0
+	q = np.zeros(3)
+	d1 = np.zeros(3)
+	d12 = 0
+	_min = ser_min
+	_max = ser_max
+	th = theta_a[i]
+	
+	while n < 20:
 
+		# Calculation of position of base attachment point
+		# (Point on servo arm where leg is connected
+		q[0] = L1*mt.cos(th)*cos(beta[i]) + P[0][i]
+		q[1] = L1*mt.cos(th)*mt.sin(beta[i]) + P[1][i]
+		q[2] = L1*mt.sin(th)
 
+		# Calculation of distance between according platform attachment
+		# point and base attachment point
+		dl[0] = rxp[0][i] - q[0]
+		dl[1] = rxp[1][i] - q[1]
+		dl[2] = rxp[2][i] - q[2]
+		dl2 = mt.sqrt(dl[0]*dl[0] + dl[1]*dl[1] + dl[2]*dl[2])
+		
+		# If distance is same as leg length, value of theta_a is correct
+		if mt.fabs(L2-d12) < 0.01:
+			return th
+		
+		# If not, split the searched space in half and try again
+		if d12 < L2:
+			max = th
+		else:
+			min = th
+
+		n += 1
+		
+		if max == ser_min or min == ser_max:
+			return th
+
+		th = min + (max-min) / 2
+	
+	return th
+
+###########################################
+# Function to calculate rotation matrix
+###########################################
+def getMatrix(pe):
+	psi = pe[5]
+	theta = pe[4]
+	phi = pe[3]
+	
+	M[0][0] = mt.cos(psi)*mt.cos(theta)
+	M[1][0] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
+	M[2][0] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
+
+	M[0][1] = mt.sin(psi)*mt.cos(theta)
+	M[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
+	M[2][1] = mt.cos(theta)*mt.sin(phi)
+
+	M[0][2] = -sin(theta);
+	M[1][2] = -cos(psi)*sin(phi)+sin(psi)*sin(theta)*cos(phi);
+	M[2][2] = cos(theta)*cos(phi);	
+
+###########################################
+# Function calculate wanted position of
+# platform attachment points using rot
+# matrix and tranlation vector
+###########################################
+def getRxp(pe):
+	
+	for i in range(6):
+		rxp[0][i] = T[0]+M[0][0]*(re[0][i])+M[0][1]*(re[1][i])+M[0][2]*(re[2][i])
+		rxp[1][i] = T[1]+M[1][0]*(re[0][i])+M[1][1]*(re[1][i])+M[1][2]*(re[2][i])
+		rxp[2][i] = T[2]+M[2][0]*(re[0][i])+M[2][1]*(re[1][i])+M[2][2]*(re[2][i])
+
+###########################################
+# Function calculating translation vector
+###########################################
+def getT(pe):
+	T[0] = pe[0]+H[0]
+	T[1] = pe[1]+H[1]
+	T[2] = pe[2]+H[2]
+
+###########################################
+# Function to set the postion of servos
+###########################################
+def setPos(pe):
+	errCount = 0
+	
+	for i in range(6):
+		getT(pe)
+		getMatrix(pe)
+		getRxp(pe)
+			
+		if i % 2 == 0:
+			servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
+		else:
+			servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
+
+	for i in range(6):
+		if theta_a[i] == ser_min or theta_a[i] == ser_max or servo_pos[i] == SERVO_MIN or servo_pos[i]== SERVO_MAX:
+			errCount += 1
+
+		servo_list[i].set_position(i, servo_pos[i])
+
+	return errCount
+	
 ###########################################
 # Helper function to map controller values
 #  to servo values
 ###########################################
 def map(x, in_min, in_max, out_min, out_max):
 	return (x - in_min) * (out_max - out_min)/(in_max - in_min) + out_min
+
+###########################################
+# Helper function to limit values to btwn
+#  a range
+###########################################
+def constrain(val, min_val, max_val):
+    return min(max_val, max(min_val, val))
 
 
 ###########################################
@@ -137,9 +262,9 @@ def map(x, in_min, in_max, out_min, out_max):
 def init_servos():
   for i in range(6):
   	if i % 2 == 0:
-  		servo = Servo(pwm, SERVO_MIN, SERVO_MAX, False)
+  		servo = Servo(PWM, SERVO_MIN, SERVO_MAX, False)
   	else:
-  		servo = Servo(pwm, SERVO_MIN, SERVO_MAX, True)
+  		servo = Servo(PWM, SERVO_MIN, SERVO_MAX, True)
      
 	print("Initializing Servo {}".format(i+1))
 	time.sleep(1)
@@ -163,7 +288,7 @@ def input(threadname):
 	
 	#if (ds4.controller_init()):
 	while True:
-		p, r, y = ds4.read_input()	
+		p, r, y = DS4.read_input()	
 	#else:
 	#	sys.exit("Controller not found!")
 		
@@ -192,7 +317,7 @@ def main():
  
 	init_servos()
   
-	if (ds4.controller_init()):
+	if (DS4.controller_init()):
 		print("Controller found!")
 		time.sleep(1)
 	else:
@@ -209,7 +334,7 @@ def main():
     #calculate_thread.start()
 
 	# Set frequency to 60hz, good for servos.
-	pwm.set_pwm_freq(60)
+	PWM.set_pwm_freq(60)
 
 	
 	while True:
