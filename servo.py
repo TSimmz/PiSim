@@ -21,3 +21,6 @@ class Servo:
 		mult = -1000 if self.inverse else 1000
 		eng_val = map(raw_val * mult, -1000, 1000, self.min_val, self.max_val)
 		self.pwm.set_pwm(channel, 0, int(eng_val))
+
+	def set_pos(self, channel, raw_val):
+		self.pwm.set_pwm(channel, 0, int(raw_val))

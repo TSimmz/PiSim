@@ -162,8 +162,8 @@ class Controller:
 				
 				if self.button:
 					self.button_states[self.button] = value
-					#if value:
-					#	print "%s pressed" % (self.button)
+					if value:
+						print "%s pressed" % (self.button)
 					#else:
 					#	print "%s released" % (self.button)
 
