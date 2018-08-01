@@ -272,14 +272,14 @@ def constrain(val, min_val, max_val):
 ###########################################
 # Helper function to initialize all servos
 ###########################################
-def init_servos():
+def Initialize_Servos():
   for i in range(6):
   	if i % 2 == 0:
-  		servo = Servo(PWM, SERVO_MIN, SERVO_MAX, False)
+  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, False)
   	else:
-  		servo = Servo(PWM, SERVO_MIN, SERVO_MAX, True)
+  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, True)
      
-	print("Initializing Servo {}".format(i+1))
+	print("Initializing Servo {}".format(servo.id))
 	time.sleep(0.25)
 	servo_list.append(servo)
 
@@ -299,8 +299,10 @@ def input(threadname):
 	print("Starting input thread...")
 	
 	while True:
-		p, r, y = DS4.read_input()	
-	
+		DS4.read_input()	
+		
+		#Add map handling here
+			
 		p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
 		r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
 		y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
@@ -322,8 +324,8 @@ def calculate(threadname):
 	print("Starting calculation thread...")
     
 	while True:
-		setPos(arr)
-		
+		#setPos(arr)
+		pass
 	
 ###########################################
 # main 
@@ -333,14 +335,13 @@ def main():
     
 	print("Starting main thread...")
  
-	init_servos()
+	Initialize_Servos()
   
 	if (DS4.controller_init()):
 		print("Controller found!")
 		time.sleep(1)
 	else:
 		sys.exit("Controller not found!")
-  
 
     # add eventlisten
     # add functionality to only start threads once motion&control button enabled
@@ -353,7 +354,6 @@ def main():
 
 	# Set frequency to 60hz, good for servos.
 	PWM.set_pwm_freq(60)
-
 	
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
@@ -378,7 +378,7 @@ def main():
 		setPos(arr)
 
 ###########################################
-# execute main 
+# Execute main 
 ###########################################
 if __name__ == "__main__":
 	main()

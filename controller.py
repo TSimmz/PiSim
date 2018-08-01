@@ -8,6 +8,15 @@ class Controller:
 	def __init__(self):
 		self.jsdev = ''	
 
+		self.control_map = {
+			'start': False,
+			'select': False,
+			'x': 0.0,
+			'y': 0.0,
+			'ry': 0.0,
+			'rx': 0.0,			
+		}
+
 		self.pitch = 0.0
 		self.roll = 0.0
 		self.yaw = 0.0
@@ -162,8 +171,10 @@ class Controller:
 				
 				if self.button:
 					self.button_states[self.button] = value
-					if value:
-						print "%s pressed" % (self.button)
+					if control_map.has_key(self.button):
+						control_map[self.button] = value
+					#if value:
+					#	print "%s pressed" % (self.button)
 					#else:
 					#	print "%s released" % (self.button)
 
@@ -175,12 +186,15 @@ class Controller:
 					self.axis_states[self.axis] = fvalue
 					#print "%s: %.3f" % (self.axis, fvalue)
 					
-					if self.axis == 'y':
-						self.pitch = fvalue
-					if self.axis == 'x':
-						self.roll = fvalue
-					if self.axis == 'rx':
-						self.yaw = fvalue
+					if control_map.has_key(self.axis):
+						control_map[self.button] = fvalue
+					
+					#if self.axis == 'y':
+					#	self.pitch = fvalue
+					#if self.axis == 'x':
+					#	self.roll = fvalue
+					#if self.axis == 'rx':
+					#	self.yaw = fvalue
 
-			return self.pitch, self.roll, self.yaw			
+			#return self.pitch, self.roll, self.yaw			
 			
