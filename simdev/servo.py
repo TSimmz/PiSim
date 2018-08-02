@@ -11,16 +11,23 @@ def map( x, in_min, in_max, out_min, out_max):
 
 
 class Servo:	
-	def __init__(self, id,  pwm,  min_val, max_val, inverse):
-		
-		self.id = id	
+	def __init__(self, pwm, id, min_pulse_val, max_pulse_val, base_angle, base_dist,  plat_angle, plat_dist, inverse):
+			
 		self.pwm = pwm
-		self.min_val = min_val
-		self.max_val = max_val
+		
+		self.id = id
+		
+		self.min_pulse_val = min_pulse_val
+		self.max_pulse_val = max_pulse_val
+		
+		self.base_angle = base_angle
+		self.base_dist = base_dist
+
+		self.plat_angle = plat_angle
+		self.plat_dist = plat_dist
+		
 		self.inverse = inverse
-		
-		self.angle = 0.0
-		
+			
 	def set_pos_direct(self, channel, raw_val):
 		mult = -1000 if self.inverse else 1000
 		eng_val = map(raw_val * mult, -1000, 1000, self.min_val, self.max_val)

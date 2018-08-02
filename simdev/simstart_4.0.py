@@ -26,6 +26,8 @@ y = 0.0
 ###########################################
 SERVO_MIN = 150  # Min pulse length out of 4096
 SERVO_MAX = 600  # Max pulse length out of 4096
+BASE_DIST = 122.1
+PLAT_DIST = 140.5
 
 ###########################################
 # Create PWM object to drive servos
@@ -273,17 +275,27 @@ def constrain(val, min_val, max_val):
 # Helper function to initialize all servos
 ###########################################
 def Initialize_Servos():
-  for i in range(6):
-  	if i % 2 == 0:
-  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, False)
-  	else:
-  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, True)
-     
-	print("Initializing Servo {}".format(servo.id))
-	time.sleep(0.25)
-	servo_list.append(servo)
+	
+	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX, 308.0, BASE_DIST, 273.1, PLAT_DIST, False)
+	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX, 352.0, BASE_DIST,  26.9, PLAT_DIST, True)
+	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX,  68.0, BASE_DIST,  33.1, PLAT_DIST, False)
+	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX, 112.0, BASE_DIST, 146.9, PLAT_DIST, True)
+	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX, 188.0, BASE_DIST, 153.1, PLAT_DIST, False)
+	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX, 232.0, BASE_DIST, 266.9, PLAT_DIST, True)
+ 
+	#for i in range(6):
+	#	if i % 2 == 0:
+  	#		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, False)
+  	#	else:
+  	#		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, True)
+	servo_list = [s0, s1, s2, s3, s4, s5]
+ 
+	for i in range(6): 
+		print("Initializing Servo {}".format(i))
+		time.sleep(0.25)
+	#servo_list.append(servo)
 
-  print("Servos have been initialized...")
+	print("Servos have been initialized...")
   
 ###########################################
 # input 
