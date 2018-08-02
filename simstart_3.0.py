@@ -303,18 +303,22 @@ def input(threadname):
 		
 		#Add map handling here
 			
-		p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
+		p = DS4.control_map['y']
+		r = DS4.control_map['x']
+		y = DS4.control_map['ry']
+			
+		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
+		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
+		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
 
-		print p_mapped, r_mapped, y_mapped
+		#print p_mapped, r_mapped, y_mapped
 
 	
-		arr[5] = mt.radians(p_mapped)
-		arr[4] = mt.radians(r_mapped)
-		arr[3] = mt.radians(y_mapped)
+		#arr[5] = mt.radians(p_mapped)
+		#arr[4] = mt.radians(r_mapped)
+		#arr[3] = mt.radians(y_mapped)
 
-		print arr
+		#print arr
 ###########################################
 # calculate
 #  
@@ -354,28 +358,39 @@ def main():
 
 	# Set frequency to 60hz, good for servos.
 	PWM.set_pwm_freq(60)
-	
+	motion = False
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
-		#i = 0
-		#for s in servo_list:
-		#	s.set_position(i,p)
-		#	i = i + 1
-		p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
+		
+		if motion:
+			i = 0
+			for s in servo_list:
+				s.set_pos_direct(i,p)
+				i = i + 1
+		
+		if DS4.control_map['start']:
+			time.sleep(0.122)
+			motion = not motion
+			if motion:
+				print("Start motion")
+			else:
+				print("Stop motion")
+
+		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
+		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
+		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
 
 		#print p_mapped, r_mapped, y_mapped
 
 
-		arr[5] = mt.radians(y_mapped)
-		arr[4] = mt.radians(r_mapped)
-		arr[3] = mt.radians(p_mapped)
+		#arr[5] = mt.radians(y_mapped)
+		#arr[4] = mt.radians(r_mapped)
+		#arr[3] = mt.radians(p_mapped)
 
 		#print arr
 		
     	
-		setPos(arr)
+		#setPos(arr)
 
 ###########################################
 # Execute main 

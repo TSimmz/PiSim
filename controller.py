@@ -171,8 +171,9 @@ class Controller:
 				
 				if self.button:
 					self.button_states[self.button] = value
-					if control_map.has_key(self.button):
-						control_map[self.button] = value
+					if self.button in self.control_map:
+						self.control_map[self.button] = value
+					
 					#if value:
 					#	print "%s pressed" % (self.button)
 					#else:
@@ -186,8 +187,8 @@ class Controller:
 					self.axis_states[self.axis] = fvalue
 					#print "%s: %.3f" % (self.axis, fvalue)
 					
-					if control_map.has_key(self.axis):
-						control_map[self.button] = fvalue
+					if self.axis in self.control_map:
+						self.control_map[self.axis] = fvalue
 					
 					#if self.axis == 'y':
 					#	self.pitch = fvalue
