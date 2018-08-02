@@ -380,7 +380,7 @@ def main():
 		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
 		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
 
-		#print p_mapped, r_mapped, y_mapped
+		
 
 
 		#arr[5] = mt.radians(y_mapped)
