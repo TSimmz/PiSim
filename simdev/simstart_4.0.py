@@ -22,7 +22,7 @@ r = 0.0
 y = 0.0
 
 ###########################################
-# Set min and max servo pulse lengths
+# Constants
 ###########################################
 SERVO_MIN = 150 	# Min pulse length out of 4096
 SERVO_MAX = 600  	# Max pulse length out of 4096
@@ -31,6 +31,7 @@ PLAT_DIST = 140.5	# From center to joint pivot center
 SERVO_LEN = 40.0 	# Length of servo arm
 SERVO_DIST = 0.0 	# From center to servo arm pivot center
 LEG_LEN = 182.0 	# Length of leg from base to platform
+SERVO_LIST = []		# List of servo class objects
 
 ###########################################
 # Create PWM object to drive servos
@@ -50,20 +51,19 @@ DEG2RAD = 180 / mt.pi
 DEG30 = mt.pi / 6
 
 # Zero pos of servos
-zero = np.array([209, 209, 209, 209, 209, 209])
+servo_zero = np.array([209, 209, 209, 209, 209, 209])
+
 # Requested position for platform
-arr = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)])
+platform_pos = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)])
+
 # Actual degree of rotation of servo arms
 theta_a = np.zeros(6)
+
 # Current servo positions
 servo_pos = np.zeros(6)
+
 # Rotation of servo arms in respect to x-axis
 beta = np.array([mt.pi/2, -mt.pi/2, -mt.pi/6, 5*mt.pi/6, -5*mt.pi/6, mt.pi/6])
-# Min/Max servo positions
-ser_min = mt.radians(-80)
-ser_max = mt.radians(80)
-# mulitpler used for conversion radians -> servo pulse
-servo_mult = 400/(mt.pi/4)
 
 ###########################################
 ###########################################
@@ -74,7 +74,7 @@ servo_mult = 400/(mt.pi/4)
 # Effective lenth of servo arm
 L1 = 1.57
 # Length of base and platform connecting arm
-L2 = 5.90
+L2 = 182 
 # Height of platform above base
 Z_HOME = 7.54
 # Distance from center of platform to attachment points
@@ -118,7 +118,7 @@ RE = np.array((
 	[0,0,0,0,0,0]))
 	
 # Arrays used for servo rotation calculation
-M = np.zeros((3,3))
+ROT = np.zeros((3,3))
 RXP = np.zeros((3,6))
 T = np.zeros(3)
 # Center position of platform
@@ -178,37 +178,38 @@ def getAlpha(i):
 	return th
 
 ###########################################
-# Function to calculate rotation matrix
+# Function to calculate rotational matrix
 ###########################################
-def getMatrix(pe):
-	psi = pe[5]
-	theta = pe[4]
-	phi = pe[3]
+def getRotMatrix(plt):
 	
-	M[0][0] = mt.cos(psi)*mt.cos(theta)
-	M[1][0] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
-	M[2][0] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
+	psi = plt[5]		# yaw
+	theta = plt[4]	# pitch
+	phi = plt[3]		# roll
+	
+	# Rotational matrix value calculation	
+	ROT[0][0] = mt.cos(psi)*mt.cos(theta)
+	ROT[1][0] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
+	ROT[2][0] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
 
-	M[0][1] = mt.sin(psi)*mt.cos(theta)
-	M[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
-	M[2][1] = mt.cos(theta)*mt.sin(phi)
+	ROT[0][1] = mt.sin(psi)*mt.cos(theta)
+	ROT[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
+	ROT[2][1] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
 
-	M[0][2] = -mt.sin(theta)
-	M[1][2] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
-	M[2][2] = mt.cos(theta)*mt.cos(phi)
+	ROT[0][2] = -mt.sin(theta)
+	ROT[1][2] = -mt.cos(theta)*mt.sin(psi)
+	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
 
 ###########################################
 # Function calculate wanted position of
 # platform attachment points using rot
 # matrix and tranlation vector
 ###########################################
-def getRxp(pe):
-	global RE
+def getRxp():
 		
 	for i in range(6):
-		RXP[0][i] = T[0]+M[0][0]*(RE[0][i])+M[0][1]*(RE[1][i])+M[0][2]*(RE[2][i])
-		RXP[1][i] = T[1]+M[1][0]*(RE[0][i])+M[1][1]*(RE[1][i])+M[1][2]*(RE[2][i])
-		RXP[2][i] = T[2]+M[2][0]*(RE[0][i])+M[2][1]*(RE[1][i])+M[2][2]*(RE[2][i])
+		RXP[0][i] = T[0]+ROT[0][0]*(RE[0][i])+M[0][1]*(RE[1][i])+M[0][2]*(RE[2][i])
+		RXP[1][i] = T[1]+ROT[1][0]*(RE[0][i])+M[1][1]*(RE[1][i])+M[1][2]*(RE[2][i])
+		RXP[2][i] = T[2]+ROT[2][0]*(RE[0][i])+M[2][1]*(RE[1][i])+M[2][2]*(RE[2][i])
 
 ###########################################
 # Function calculating translation vector
@@ -271,56 +272,86 @@ def Initialize_Servos():
 	
 	PWM.set_pwm_freq(60)
 	
-	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX, 308.0, BASE_DIST, 273.1, PLAT_DIST, False)
-	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX, 352.0, BASE_DIST,  26.9, PLAT_DIST, True)
-	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX,  68.0, BASE_DIST,  33.1, PLAT_DIST, False)
-	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX, 112.0, BASE_DIST, 146.9, PLAT_DIST, True)
-	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX, 188.0, BASE_DIST, 153.1, PLAT_DIST, False)
-	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX, 232.0, BASE_DIST, 266.9, PLAT_DIST, True)
+	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
+		308.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		273.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+
+	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
+		352.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		 26.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
+
+	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
+		 68.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		 33.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+	
+	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
+		112.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		146.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
+
+	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
+		188.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		153.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+
+	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
+		232.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
+		266.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
  
-	servo_list = [s0, s1, s2, s3, s4, s5]
+	SERVO_LIST.append(s0)
+	SERVO_LIST.append(s1)
+	SERVO_LIST.append(s2)
+	SERVO_LIST.append(s3)
+	SERVO_LIST.append(s4)
+	SERVO_LIST.append(s5)
+
  
 	print("\n###########################################")
-	for i in range(6): 
-		print("Initializing Servo {}".format(i))
+	for s in SERVO_LIST: 
+		print("Initializing Servo {}".format(s.id))
 		time.sleep(0.25)
 
 	print("Servos have been initialized...")
 	print("###########################################\n")	
+
 ###########################################
-# input 
+# Helper function to initialize controls
+###########################################
+def Initialize_Controls():
+	print("\n############################################")
+	if DS4.controller_init():
+		print("Controller found...")
+		time.sleep(0.25)
+	else:
+		print("Controller not found...")
+		print("############################################\n")
+		time.sleep(1)
+		sys.exit("Exiting...")
+
+###########################################
+# Helper function to initialize variables
+###########################################
+def Initialize_Vars():
+	pass
+
+###########################################
+# controls 
 #   Retrieve pitch, roll, yaw values from 
 #   controller input
 ###########################################
-def input(threadname):
+def controls(threadname):
 	global p
 	global r
 	global y
    
 	
-	print("Starting input thread...")
+	print("Starting controls thread...")
 	
 	while True:
 		DS4.read_input()	
-		
-		#Add map handling here
-			
+					
 		p = DS4.control_map['y']
 		r = DS4.control_map['x']
 		y = DS4.control_map['ry']
-			
-		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
 
-		#print p_mapped, r_mapped, y_mapped
-
-	
-		#arr[5] = mt.radians(p_mapped)
-		#arr[4] = mt.radians(r_mapped)
-		#arr[3] = mt.radians(y_mapped)
-
-		#print arr
 ###########################################
 # calculate
 #  
@@ -339,60 +370,41 @@ def calculate(threadname):
 ###########################################
 def main():
     
-	print("Starting main thread...")
- 
-	Initialize_Servos()
-  
-	if (DS4.controller_init()):
-		print("Controller found!")
-		time.sleep(1)
-	else:
-		sys.exit("Controller not found!")
+	print("Starting main thread...\n...")
 
-    # add eventlisten
-    # add functionality to only start threads once motion&control button enabled
-    
-	input_thread = Thread(target=input, args=("input_thread",))
+	print("Starting setup...\n...") 
+	Initialize_Servos()
+  	Initialize_Controls()
+	Initialize_Vars()
+	
+	controls_thread = Thread(target=controls, args=("controls_thread",))
 	#calculate_thread = Thread(target=calculate, args=("calculate_thread",))
     
-	input_thread.start()
+	controls_thread.start()
 	#calculate_thread.start()
 
-	# Set frequency to 60hz, good for servos.
-	PWM.set_pwm_freq(60)
-	motion = False
+	PWM.set_pwm_freq(60)	# Set frequency to 60hz
+	motion = False			# Used to track motion status
+
+	print("Setup complete!")
+	print("Press Start to enable Controls & Motion...")
+
 	while True:
-		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
+		print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
 		
-		if motion:
-			i = 0
-			for s in servo_list:
-				s.set_pos_direct(i,p)
-				i = i + 1
+		#if motion:
+		i = 0
+		for s in SERVO_LIST:
+			s.set_pos_direct(i,p)
+			i = i + 1
 		
-		if DS4.control_map['start']:
-			time.sleep(0.122)
-			motion = not motion
-			if motion:
-				print("Start motion")
-			else:
-				print("Stop motion")
-
-		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
-
-		
-
-
-		#arr[5] = mt.radians(y_mapped)
-		#arr[4] = mt.radians(r_mapped)
-		#arr[3] = mt.radians(p_mapped)
-
-		#print arr
-		
-    	
-		#setPos(arr)
+		#if DS4.control_map['start']:
+		#	time.sleep(0.1333)
+		#	motion = not motion
+		#	if motion:
+		#		print("Starting motion...")
+		#	else:
+		#		print("Stoping motion...")
 
 ###########################################
 # Execute main 
