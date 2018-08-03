@@ -273,28 +273,28 @@ def Initialize_Servos():
 	PWM.set_pwm_freq(60)
 	
 	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
-		308.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		273.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+		308.0, BASE_DIST,
+		273.1, PLAT_DIST, False)
 
 	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
-		352.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		 26.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
+		352.0, BASE_DIST,
+		 26.9, PLAT_DIST, True)
 
 	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
-		 68.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		 33.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+		 68.0, BASE_DIST,
+		 33.1, PLAT_DIST, False)
 	
 	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
-		112.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		146.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
+		112.0, BASE_DIST,
+		146.9, PLAT_DIST, True)
 
 	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
-		188.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		153.1, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, False)
+		188.0, BASE_DIST,
+		153.1, PLAT_DIST, False)
 
 	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
-		232.0, BASE_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0},
-		266.9, PLAT_DIST, {'x': 0.0, 'y': 0.0, 'z': 0.0}, True)
+		232.0, BASE_DIST,
+		266.9, PLAT_DIST, True)
  
 	SERVO_LIST.append(s0)
 	SERVO_LIST.append(s1)
@@ -307,6 +307,14 @@ def Initialize_Servos():
 	print("\n###########################################")
 	for s in SERVO_LIST: 
 		print("Initializing Servo {}".format(s.id))
+		s.set_coords(Z_HOME)
+
+		print("Base coords:")
+		print s.base_coords
+
+		print("Plat coords:")
+		print s.plat_coords
+
 		time.sleep(0.25)
 
 	print("Servos have been initialized...")
