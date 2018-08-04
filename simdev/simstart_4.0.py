@@ -31,7 +31,7 @@ PLAT_DIST = 140.5	# From center to joint pivot center
 SERVO_LEN = 40.0 	# Length of servo arm
 SERVO_DIST = 162.8 	# From center to servo arm pivot center
 LEG_LEN = 182.0 	# Length of leg from base to platform
-Z_HOME = 191.5		# Height of platform above base
+Z_HOME = 160		# Height of platform above base
 SERVO_LIST = []		# List of servo class objects
 
 ###########################################
@@ -102,7 +102,9 @@ def getAlpha():
 		NN = mt.pow(N,2)
 		D = mt.sqrt(MM+NN)
 		
-		s.alpha = mt.asin(mt.radians(L / D)) - mt.atan(mt.radians(N / M))
+		A = mt.asin(mt.radians(L / D)) - mt.atan(mt.radians(N / M))
+		
+		s.alpha = A if s.inverse else (mt.pi - A)
 		
 ###########################################
 # Function to set the postion of servos
@@ -113,19 +115,19 @@ def Move_Platform():
 	getRotMatrix()
 	getAlpha()
 	
-	#for s in SERVO_LIST:
-	#	print int(s.alpha*1000) 
-
-	alpha_list = [
-		SERVO_LIST[0].alpha,
-		SERVO_LIST[1].alpha,
-		SERVO_LIST[2].alpha,
-		SERVO_LIST[3].alpha,
-		SERVO_LIST[4].alpha,
-		SERVO_LIST[5].alpha,
-	]
-
-	print alpha_list
+	for s in SERVO_LIST:
+		s.set_pos_direct(mt.degrees(s.alpha))	
+	
+#	alpha_list = [
+#		mt.degrees(SERVO_LIST[0].alpha),
+#		mt.degrees(SERVO_LIST[1].alpha),
+#		mt.degrees(SERVO_LIST[2].alpha),
+#		mt.degrees(SERVO_LIST[3].alpha),
+#		mt.degrees(SERVO_LIST[4].alpha),
+#		mt.degrees(SERVO_LIST[5].alpha),
+#	]
+#
+#	print alpha_list
 
 	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
 	#servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
@@ -197,7 +199,9 @@ def Initialize_Servos():
 # Helper function to initialize controls
 ###########################################
 def Initialize_Controls():
+
 	print("\n############################################")
+
 	if DS4.controller_init():
 		print("Controller found...")
 		time.sleep(0.25)
@@ -245,17 +249,6 @@ def controls(threadname):
 		platform_pos[4] = mt.radians(p_mapped)
 		platform_pos[3] = mt.radians(r_mapped)
 
-###########################################
-# calculate
-#  
-###########################################
-def calculate(threadname):
-    
-	print("Starting calculation thread...")
-    
-	while True:
-		#setPos(arr)
-		pass
 	
 ###########################################
 # main 
@@ -264,17 +257,14 @@ def calculate(threadname):
 def main():
     
 	print("Starting main thread...\n...")
-
 	print("Starting setup...\n...") 
+
 	Initialize_Servos()
   	Initialize_Controls()
-	Initialize_Vars()
 	
+	# Setup and start the controls thread
 	controls_thread = Thread(target=controls, args=("controls_thread",))
-	#calculate_thread = Thread(target=calculate, args=("calculate_thread",))
-    
 	controls_thread.start()
-	#calculate_thread.start()
 
 	PWM.set_pwm_freq(60)	# Set frequency to 60hz
 	motion = False			# Used to track motion status

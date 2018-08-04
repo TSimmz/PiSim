@@ -45,7 +45,9 @@ class Servo:
 		
 		self.Q = np.zeros((3,1))
 		self.L = np.zeros((3,1))
-				
+	
+		self._min = 0 if self.inverse else 175
+		self._max = 5 if self.inverse else 180 			
 
 	###############################################################
 	# Calculates X,Y,Z coordinates of base and platform points
@@ -67,9 +69,10 @@ class Servo:
 	###############################################################
 	def set_pos_direct(self, raw_val):
 		
-		mult = -1000 if self.inverse else 1000
-		eng_val = map(raw_val * mult, -1000, 1000, self.min_pulse_val, self.max_pulse_val)
+		#mult = -10000 if self.inverse else 10000
+		eng_val = map(raw_val , self._min, self._max, self.min_pulse_val, self.max_pulse_val)
 		self.pwm.set_pwm(self.id, 0, int(eng_val))
+		print("Servo {} : Pulse {}".format(self.id, eng_val))
 		
 	###############################################################
 	# Sets position of servos from kinematics
