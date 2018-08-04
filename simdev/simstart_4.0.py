@@ -58,9 +58,9 @@ H[2][0] = Z_HOME
 # Function calculating translation vector
 ###########################################
 def getTransMatrix():
-    T[0][0] = pe[0]+H[0][0]
-    T[1][0] = pe[1]+H[1][0]
-    T[2][0] = pe[2]+H[2][0]
+    T[0][0] = platform_pos[0]+H[0][0]
+    T[1][0] = platform_pos[1]+H[1][0]
+    T[2][0] = platform_pos[2]+H[2][0]
 
 ###########################################
 # Function calculating rotational matrix
@@ -94,46 +94,41 @@ def getAlpha():
 		s.Q = np.add(T, np.matmul(ROT, s.plat_coords))
 		s.L = np.subtract(s.Q, s.base_coords)
 
-		L = np.square(s.L) - (np.square(LEG_LEN) + np.square(SERVO_LEN))
+		L = mt.pow(np.linalg.norm(s.L),2) - (mt.pow(LEG_LEN,2) + mt.pow(SERVO_LEN,2))
 		M = 2 * SERVO_LEN * (s.Q[2][0] - s.base_coords[2,0])
-		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q[0][0] - s.base_coords[0][0]))+(mt.sin(s.beta)*(s.Q[1][0] - s.base_coords[1][0]))
+		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q[0][0] - s.base_coords[0][0]))+(mt.sin(s.beta)*(s.Q[1][0] - s.base_coords[1][0])))
+	
+		MM = mt.pow(M,2)
+		NN = mt.pow(N,2)
+		D = mt.sqrt(MM+NN)
 		
-		s.alpha = (mt.asin(L/mt.sqrt(M*M + N*N))) - mt.atan(N/M)
+		s.alpha = mt.asin(mt.radians(L / D)) - mt.atan(mt.radians(N / M))
 		
 ###########################################
 # Function to set the postion of servos
 ###########################################
-def setPos():
+def Move_Platform():
 	
 	getTransMatrix()
 	getRotMatrix()
 	getAlpha()
-
-	#print pe
-	for i in range(6):
-		getT(pe)
-		getMatrix(pe)
-		getRxp(pe)
-		
-		theta_a[i] = getAlpha(i)
-		print theta_a[i]	
-		if i % 2 == 0:
-			servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
-		else:
-			servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
-		
-	#print servo_pos
-
-	for i in range(6):
-		if theta_a[i] == ser_min or theta_a[i] == ser_max or servo_pos[i] == SERVO_MIN or servo_pos[i]== SERVO_MAX:
-			errCount += 1
-
-
-		servo_list[i].set_pos(i, servo_pos[i])
-
 	
-	#print servo_pos
-	return errCount
+	#for s in SERVO_LIST:
+	#	print int(s.alpha*1000) 
+
+	alpha_list = [
+		SERVO_LIST[0].alpha,
+		SERVO_LIST[1].alpha,
+		SERVO_LIST[2].alpha,
+		SERVO_LIST[3].alpha,
+		SERVO_LIST[4].alpha,
+		SERVO_LIST[5].alpha,
+	]
+
+	print alpha_list
+
+	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
+	#servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
 	
 ###########################################
 # Helper function to map controller values
@@ -287,8 +282,6 @@ def main():
 	print("Setup complete!")
 	print("Press Start to enable Controls & Motion...")
 	time.sleep(0.25)
-	
-	Motion_Startup()
 		
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
@@ -311,8 +304,7 @@ def main():
 		
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p_mapped, r_mapped, y_mapped))
 		
-		getRotMatrix()
-		getQ()
+		Move_Platform()
 
 ###########################################
 # Execute main 

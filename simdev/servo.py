@@ -74,7 +74,5 @@ class Servo:
 	###############################################################
 	# Sets position of servos from kinematics
 	###############################################################
-	def set_pos(self, raw_val):
-		self.pwm.set_pwm(self.id, 0, int(raw_val))
-
-
+	def set_pos(self):
+		self.pwm.set_pwm(self.id, 0, self.pos)
