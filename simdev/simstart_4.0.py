@@ -22,15 +22,16 @@ r = 0.0
 y = 0.0
 
 ###########################################
-# Constants
+# Constants (measurements in mm)
 ###########################################
 SERVO_MIN = 150 	# Min pulse length out of 4096
 SERVO_MAX = 600  	# Max pulse length out of 4096
 BASE_DIST = 122.1	# From center to servo pivot center
 PLAT_DIST = 140.5	# From center to joint pivot center
 SERVO_LEN = 40.0 	# Length of servo arm
-SERVO_DIST = 0.0 	# From center to servo arm pivot center
+SERVO_DIST = 162.8 	# From center to servo arm pivot center
 LEG_LEN = 182.0 	# Length of leg from base to platform
+Z_HOME = 191.5		# Height of platform above base
 SERVO_LIST = []		# List of servo class objects
 
 ###########################################
@@ -50,79 +51,11 @@ PI = mt.pi
 DEG2RAD = 180 / mt.pi
 DEG30 = mt.pi / 6
 
-# Zero pos of servos
-servo_zero = np.array([209, 209, 209, 209, 209, 209])
+platform_pos = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)]) # Requested position of platform
 
-# Requested position for platform
-platform_pos = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)])
-
-# Actual degree of rotation of servo arms
-theta_a = np.zeros(6)
-
-# Current servo positions
-servo_pos = np.zeros(6)
-
-# Rotation of servo arms in respect to x-axis
-beta = np.array([mt.pi/2, -mt.pi/2, -mt.pi/6, 5*mt.pi/6, -5*mt.pi/6, mt.pi/6])
-
-###########################################
-###########################################
-#      SIM SPECIFIC - MUST ADJUST         #
-###########################################
-###########################################
-
-# Effective lenth of servo arm
-L1 = 1.57
-# Length of base and platform connecting arm
-L2 = 182 
-# Height of platform above base
-Z_HOME = 7.54
-# Distance from center of platform to attachment points
-RD = 4.4
-# Distance from center of base to center of servo rotation points
-PD = 5.00
-# Angle between two servo axis points
-THETA_P = mt.radians(37.5)
-# Angle between platform attachment points
-THETA_R = mt.radians(8)
-# Helper variable
-THETA_ANGLE = ((mt.pi/3)-THETA_P)/2.0
-# X-Y Values for Servo rotation points
-P = np.array((
-	[int(-PD * mt.cos(DEG30 - THETA_ANGLE)),
-	int(-PD * mt.cos(DEG30 - THETA_ANGLE)),
-	int(PD * mt.sin(THETA_ANGLE)),
-	int(PD * mt.cos(DEG30 + THETA_ANGLE)),
-	int(PD * mt.cos(DEG30 + THETA_ANGLE)),
-	int(PD * mt.sin(THETA_ANGLE))],
-	[int(-PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(PD * mt.cos(THETA_ANGLE)),
-	int(PD * mt.sin(DEG30 + THETA_ANGLE)),
-	int(-PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(-PD * mt.cos(THETA_ANGLE))]))
-# X-Y-Z Values of platform attachment points positions
-RE = np.array((
-	[int(-RD * mt.sin(DEG30 + THETA_R/2)),
-	int(-RD * mt.sin(DEG30 + THETA_R/2)),
-	int(-RD * mt.sin(DEG30 - THETA_R/2)),
-	int(RD * mt.cos(THETA_R/2)),
-	int(RD * mt.cos(THETA_R/2)),
-	int(-RD * mt.sin(DEG30 - THETA_R/2))],
-	[int(-RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.sin(THETA_R/2)),
-	int(-RD * mt.sin(THETA_R/2)),
-	int(-RD * mt.cos(DEG30 - THETA_R/2))],
-	[0,0,0,0,0,0]))
-	
-# Arrays used for servo rotation calculation
-ROT = np.zeros((3,3))
-RXP = np.zeros((3,6))
-T = np.zeros(3)
-# Center position of platform
-H = np.array([0, 0, Z_HOME])
+ROT = np.zeros((3,3))			# Rotational matrix
+T = np.zeros(3)					# Translational matrix
+H = np.array([0, 0, Z_HOME])	# Center position of platform
 
 ###########################################
 # Helper function to calculate needed servo
@@ -130,9 +63,6 @@ H = np.array([0, 0, Z_HOME])
 ###########################################
 def getAlpha(i):
 	
-	global beta
-	global P
-
 	n = 0
 	th = 0.0
 	q = np.zeros(3)
@@ -183,7 +113,7 @@ def getAlpha(i):
 def getRotMatrix(plt):
 	
 	psi = plt[5]		# yaw
-	theta = plt[4]	# pitch
+	theta = plt[4]		# pitch
 	phi = plt[3]		# roll
 	
 	# Rotational matrix value calculation	
@@ -199,6 +129,7 @@ def getRotMatrix(plt):
 	ROT[1][2] = -mt.cos(theta)*mt.sin(psi)
 	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
 
+	print ROT
 ###########################################
 # Function calculate wanted position of
 # platform attachment points using rot
@@ -210,6 +141,17 @@ def getRxp():
 		RXP[0][i] = T[0]+ROT[0][0]*(RE[0][i])+M[0][1]*(RE[1][i])+M[0][2]*(RE[2][i])
 		RXP[1][i] = T[1]+ROT[1][0]*(RE[0][i])+M[1][1]*(RE[1][i])+M[1][2]*(RE[2][i])
 		RXP[2][i] = T[2]+ROT[2][0]*(RE[0][i])+M[2][1]*(RE[1][i])+M[2][2]*(RE[2][i])
+
+###########################################
+# Function calculating Q for all legs
+###########################################
+def getQ():
+	
+	for s in SERVO_LIST:
+		print ROT
+		#print
+		#P = np.matmul(ROT, 
+		
 
 ###########################################
 # Function calculating translation vector
@@ -302,18 +244,17 @@ def Initialize_Servos():
 	SERVO_LIST.append(s3)
 	SERVO_LIST.append(s4)
 	SERVO_LIST.append(s5)
-
  
 	print("\n###########################################")
 	for s in SERVO_LIST: 
 		print("Initializing Servo {}".format(s.id))
 		s.set_coords(Z_HOME)
 
-		print("Base coords:")
-		print s.base_coords
+		#print("Base coords:")
+		#print s.base_coords
 
-		print("Plat coords:")
-		print s.plat_coords
+		#print("Plat coords:")
+		#print s.plat_coords
 
 		time.sleep(0.25)
 
@@ -358,7 +299,7 @@ def controls(threadname):
 					
 		p = DS4.control_map['y']
 		r = DS4.control_map['x']
-		y = DS4.control_map['ry']
+		y = DS4.control_map['rx']
 
 ###########################################
 # calculate
@@ -396,9 +337,17 @@ def main():
 
 	print("Setup complete!")
 	print("Press Start to enable Controls & Motion...")
-
+	time.sleep(0.25)
+	
+	#SERVO_LIST[0].set_pos(0, -1)
+	#SERVO_LIST[1].set_pos(1, -1)
+	#SERVO_LIST[2].set_pos(2, 1)
+	#SERVO_LIST[3].set_pos(3, 1)
+	#SERVO_LIST[4].set_pos(4, -1)
+	#SERVO_LIST[5].set_pos(5, -1)
+	
 	while True:
-		print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
+		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
 		
 		#if motion:
 		i = 0
