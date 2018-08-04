@@ -47,74 +47,29 @@ DS4 = Controller()
 ###########################################
 # Platform code
 ###########################################
-PI = mt.pi
-DEG2RAD = 180 / mt.pi
-DEG30 = mt.pi / 6
-
 platform_pos = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)]) # Requested position of platform
 
 ROT = np.zeros((3,3))			# Rotational matrix
-T = np.zeros(3)					# Translational matrix
-H = np.array([0, 0, Z_HOME])	# Center position of platform
+T = np.zeros((3,1))				# Translational matrix
+H = np.zeros((3,1))				# Center position of platform
+H[2][0] = Z_HOME
 
 ###########################################
-# Helper function to calculate needed servo
-#  rotation value
+# Function calculating translation vector
 ###########################################
-def getAlpha(i):
-	
-	n = 0
-	th = 0.0
-	q = np.zeros(3)
-	d1 = np.zeros(3)
-	d12 = 0
-	_min = ser_min
-	_max = ser_max
-	th = theta_a[i]
-	
-	while n < 20:
-
-		# Calculation of position of base attachment point
-		# (Point on servo arm where leg is connected
-		q[0] = L1*mt.cos(th)*mt.cos(beta[i]) + P[0][i]
-		q[1] = L1*mt.cos(th)*mt.sin(beta[i]) + P[1][i]
-		q[2] = L1*mt.sin(th)
-
-		# Calculation of distance between according platform attachment
-		# point and base attachment point
-		d1[0] = RXP[0][i] - q[0]
-		d1[1] = RXP[1][i] - q[1]
-		d1[2] = RXP[2][i] - q[2]
-
-		dl2 = mt.sqrt(d1[0]*d1[0] + d1[1]*d1[1] + d1[2]*d1[2])
-		
-		# If distance is same as leg length, value of theta_a is correct
-		if mt.fabs(L2-d12) < 0.01:
-			return th
-		
-		# If not, split the searched space in half and try again
-		if d12 < L2:
-			_max = th
-		else:
-			_min = th
-
-		n += 1
-		
-		if _max == ser_min or _min == ser_max:
-			return th
-
-		th = _min + (_max-_min) / 2
-	
-	return th
+def getTransMatrix():
+    T[0][0] = pe[0]+H[0][0]
+    T[1][0] = pe[1]+H[1][0]
+    T[2][0] = pe[2]+H[2][0]
 
 ###########################################
-# Function to calculate rotational matrix
+# Function calculating rotational matrix
 ###########################################
-def getRotMatrix(plt):
+def getRotMatrix():
 	
-	psi = plt[5]		# yaw
-	theta = plt[4]		# pitch
-	phi = plt[3]		# roll
+	psi = platform_pos[5]		# yaw
+	theta = platform_pos[4]		# pitch
+	phi = platform_pos[3]		# roll
 	
 	# Rotational matrix value calculation	
 	ROT[0][0] = mt.cos(psi)*mt.cos(theta)
@@ -129,43 +84,31 @@ def getRotMatrix(plt):
 	ROT[1][2] = -mt.cos(theta)*mt.sin(psi)
 	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
 
-	print ROT
 ###########################################
-# Function calculate wanted position of
-# platform attachment points using rot
-# matrix and tranlation vector
+# Helper function to calculate needed servo
+#  rotation value
 ###########################################
-def getRxp():
+def getAlpha():
+
+    for s in SERVO_LIST:
+		s.Q = np.add(T, np.matmul(ROT, s.plat_coords))
+		s.L = np.subtract(s.Q, s.base_coords)
+
+		L = np.square(s.L) - (np.square(LEG_LEN) + np.square(SERVO_LEN))
+		M = 2 * SERVO_LEN * (s.Q[2][0] - s.base_coords[2,0])
+		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q[0][0] - s.base_coords[0][0]))+(mt.sin(s.beta)*(s.Q[1][0] - s.base_coords[1][0]))
 		
-	for i in range(6):
-		RXP[0][i] = T[0]+ROT[0][0]*(RE[0][i])+M[0][1]*(RE[1][i])+M[0][2]*(RE[2][i])
-		RXP[1][i] = T[1]+ROT[1][0]*(RE[0][i])+M[1][1]*(RE[1][i])+M[1][2]*(RE[2][i])
-		RXP[2][i] = T[2]+ROT[2][0]*(RE[0][i])+M[2][1]*(RE[1][i])+M[2][2]*(RE[2][i])
-
-###########################################
-# Function calculating Q for all legs
-###########################################
-def getQ():
-	
-	for s in SERVO_LIST:
-		print ROT
-		#print
-		#P = np.matmul(ROT, 
+		s.alpha = (mt.asin(L/mt.sqrt(M*M + N*N))) - mt.atan(N/M)
 		
-
-###########################################
-# Function calculating translation vector
-###########################################
-def getT(pe):
-	T[0] = pe[0]+H[0]
-	T[1] = pe[1]+H[1]
-	T[2] = pe[2]+H[2]
-
 ###########################################
 # Function to set the postion of servos
 ###########################################
-def setPos(pe):
-	errCount = 0
+def setPos():
+	
+	getTransMatrix()
+	getRotMatrix()
+	getAlpha()
+
 	#print pe
 	for i in range(6):
 		getT(pe)
@@ -250,12 +193,6 @@ def Initialize_Servos():
 		print("Initializing Servo {}".format(s.id))
 		s.set_coords(Z_HOME)
 
-		#print("Base coords:")
-		#print s.base_coords
-
-		#print("Plat coords:")
-		#print s.plat_coords
-
 		time.sleep(0.25)
 
 	print("Servos have been initialized...")
@@ -279,8 +216,8 @@ def Initialize_Controls():
 # Helper function to initialize variables
 ###########################################
 def Initialize_Vars():
-	pass
-
+	pass			
+	
 ###########################################
 # controls 
 #   Retrieve pitch, roll, yaw values from 
@@ -295,11 +232,23 @@ def controls(threadname):
 	print("Starting controls thread...")
 	
 	while True:
+		# Read inputs from controller
 		DS4.read_input()	
-					
+		
+		# Get pitch, roll, and yaw from controller			
 		p = DS4.control_map['y']
 		r = DS4.control_map['x']
 		y = DS4.control_map['rx']
+
+		# Map values to between +-45 degrees
+		p_mapped = int(map(p * 100, -100, 100, -45, 45))
+		r_mapped = int(map(r * 100, -100, 100, -45, 45))
+		y_mapped = int(map(y * 100, -100, 100, -45, 45))
+		
+		# Assign them to position matrix
+		platform_pos[5] = mt.radians(y_mapped)
+		platform_pos[4] = mt.radians(p_mapped)
+		platform_pos[3] = mt.radians(r_mapped)
 
 ###########################################
 # calculate
@@ -339,21 +288,16 @@ def main():
 	print("Press Start to enable Controls & Motion...")
 	time.sleep(0.25)
 	
-	#SERVO_LIST[0].set_pos(0, -1)
-	#SERVO_LIST[1].set_pos(1, -1)
-	#SERVO_LIST[2].set_pos(2, 1)
-	#SERVO_LIST[3].set_pos(3, 1)
-	#SERVO_LIST[4].set_pos(4, -1)
-	#SERVO_LIST[5].set_pos(5, -1)
-	
+	Motion_Startup()
+		
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
 		
 		#if motion:
-		i = 0
-		for s in SERVO_LIST:
-			s.set_pos_direct(i,p)
-			i = i + 1
+		# = 0
+		#or s in SERVO_LIST:
+		#	set_pos_direct(i,p)
+		#	i  = i + 1
 		
 		#if DS4.control_map['start']:
 		#	time.sleep(0.1333)
@@ -362,6 +306,13 @@ def main():
 		#		print("Starting motion...")
 		#	else:
 		#		print("Stoping motion...")
+		
+		#print platform_pos
+		
+		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p_mapped, r_mapped, y_mapped))
+		
+		getRotMatrix()
+		getQ()
 
 ###########################################
 # Execute main 
