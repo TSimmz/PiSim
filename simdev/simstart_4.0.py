@@ -31,7 +31,7 @@ PLAT_DIST = 140.5	# From center to joint pivot center
 SERVO_LEN = 40.0 	# Length of servo arm
 SERVO_DIST = 162.8 	# From center to servo arm pivot center
 LEG_LEN = 182.0 	# Length of leg from base to platform
-Z_HOME = 160		# Height of platform above base
+Z_HOME = 150	  	# Height of platform above base
 SERVO_LIST = []		# List of servo class objects
 
 ###########################################
@@ -58,9 +58,12 @@ H[2][0] = Z_HOME
 # Function calculating translation vector
 ###########################################
 def getTransMatrix():
-    T[0][0] = platform_pos[0]+H[0][0]
-    T[1][0] = platform_pos[1]+H[1][0]
-    T[2][0] = platform_pos[2]+H[2][0]
+	
+	T[0][0] = platform_pos[0]+H[0][0]
+	T[1][0] = platform_pos[1]+H[1][0]
+	T[2][0] = platform_pos[2]+H[2][0]
+    
+	#print T
 
 ###########################################
 # Function calculating rotational matrix
@@ -83,6 +86,8 @@ def getRotMatrix():
 	ROT[0][2] = -mt.sin(theta)
 	ROT[1][2] = -mt.cos(theta)*mt.sin(psi)
 	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
+	
+	#print ROT
 
 ###########################################
 # Helper function to calculate needed servo
@@ -240,9 +245,9 @@ def controls(threadname):
 		y = DS4.control_map['rx']
 
 		# Map values to between +-45 degrees
-		p_mapped = int(map(p * 100, -100, 100, -45, 45))
-		r_mapped = int(map(r * 100, -100, 100, -45, 45))
-		y_mapped = int(map(y * 100, -100, 100, -45, 45))
+		p_mapped = int(map(p * 100, -100, 100, -90, 90))
+		r_mapped = int(map(r * 100, -100, 100, -90, 90))
+		y_mapped = int(map(y * 100, -100, 100, -90, 90))
 		
 		# Assign them to position matrix
 		platform_pos[5] = mt.radians(y_mapped)

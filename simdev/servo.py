@@ -72,7 +72,7 @@ class Servo:
 		#mult = -10000 if self.inverse else 10000
 		eng_val = map(raw_val , self._min, self._max, self.min_pulse_val, self.max_pulse_val)
 		self.pwm.set_pwm(self.id, 0, int(eng_val))
-		print("Servo {} : Pulse {}".format(self.id, eng_val))
+		#print("Servo {} : Pulse {}".format(self.id, eng_val))
 		
 	###############################################################
 	# Sets position of servos from kinematics
