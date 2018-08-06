@@ -31,8 +31,9 @@ PLAT_DIST = 140.5	# From center to joint pivot center
 SERVO_LEN = 40.0 	# Length of servo arm
 SERVO_DIST = 162.8 	# From center to servo arm pivot center
 LEG_LEN = 182.0 	# Length of leg from base to platform
-Z_HOME = 150	  	# Height of platform above base
+Z_HOME = 144	  	# Height of platform above base
 SERVO_LIST = []		# List of servo class objects
+PI = mt.pi
 
 ###########################################
 # Create PWM object to drive servos
@@ -88,6 +89,7 @@ def getRotMatrix():
 	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
 	
 	#print ROT
+	#print ("\n")
 
 ###########################################
 # Helper function to calculate needed servo
@@ -121,8 +123,16 @@ def Move_Platform():
 	getAlpha()
 	
 	for s in SERVO_LIST:
-		s.set_pos_direct(mt.degrees(s.alpha))	
-	
+		#s.set_pos_direct(mt.degrees(s.alpha))	
+		#print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
+		print("Q = "),
+		print T,
+		print(" + "),
+		print ROT,
+		print(" * "),
+		print s.plat_coords,
+		print("\n") 
+
 #	alpha_list = [
 #		mt.degrees(SERVO_LIST[0].alpha),
 #		mt.degrees(SERVO_LIST[1].alpha),
@@ -161,27 +171,33 @@ def Initialize_Servos():
 	
 	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
 		308.0, BASE_DIST,
-		273.1, PLAT_DIST, False)
+		273.1, PLAT_DIST,
+		0, False)
 
 	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
 		352.0, BASE_DIST,
-		 26.9, PLAT_DIST, True)
+		 26.9, PLAT_DIST,
+		300, True)
 
 	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
 		 68.0, BASE_DIST,
-		 33.1, PLAT_DIST, False)
+		 33.1, PLAT_DIST,
+		120, False)
 	
 	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
 		112.0, BASE_DIST,
-		146.9, PLAT_DIST, True)
+		146.9, PLAT_DIST,
+		 60, True)
 
 	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
 		188.0, BASE_DIST,
-		153.1, PLAT_DIST, False)
+		153.1, PLAT_DIST,
+		240, False)
 
 	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
 		232.0, BASE_DIST,
-		266.9, PLAT_DIST, True)
+		266.9, PLAT_DIST,
+		180,  True)
  
 	SERVO_LIST.append(s0)
 	SERVO_LIST.append(s1)

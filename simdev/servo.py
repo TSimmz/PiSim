@@ -17,7 +17,7 @@ class Servo:
 	################################################################
 	# Servo Constructor
 	################################################################
-	def __init__(self, pwm, _id, min_pulse_val, max_pulse_val, base_angle, base_dist, plat_angle, plat_dist, inverse):
+	def __init__(self, pwm, _id, min_pulse_val, max_pulse_val, base_angle, base_dist, plat_angle, plat_dist, b_deg, inverse):
 			
 		self.pwm = pwm
 		
@@ -41,7 +41,7 @@ class Servo:
 		self.pos = 0.0
 
 		self.alpha = 0.0	
-		self.beta = mt.radians(self.base_angle)
+		self.beta = mt.radians(b_deg)
 		
 		self.Q = np.zeros((3,1))
 		self.L = np.zeros((3,1))
