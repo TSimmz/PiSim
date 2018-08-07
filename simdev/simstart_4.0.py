@@ -4,6 +4,7 @@ from __future__ import division
 import sys
 from serial import Serial
 from threading import Thread
+from position import Position
 from controller import Controller
 from servo import Servo
 
@@ -22,10 +23,18 @@ r = 0.0
 y = 0.0
 
 ###########################################
-# Set min and max servo pulse lengths
+# Constants (measurements in mm)
 ###########################################
-SERVO_MIN = 150  # Min pulse length out of 4096
-SERVO_MAX = 600  # Max pulse length out of 4096
+SERVO_MIN = 150 	# Min pulse length out of 4096
+SERVO_MAX = 600  	# Max pulse length out of 4096
+BASE_DIST = 122.1	# From center to servo pivot center
+PLAT_DIST = 140.5	# From center to joint pivot center
+SERVO_LEN = 40.0 	# Length of servo arm
+SERVO_DIST = 162.8 	# From center to servo arm pivot center
+LEG_LEN = 182.0 	# Length of leg from base to platform
+Z_HOME = 144	  	# Height of platform above base
+SERVO_LIST = []		# List of servo class objects
+PI = mt.pi
 
 ###########################################
 # Create PWM object to drive servos
@@ -38,221 +47,100 @@ PWM = Adafruit_PCA9685.PCA9685()
 DS4 = Controller()
 
 ###########################################
-# Set frequency to 60hz, good for servos.
-###########################################
-PWM.set_pwm_freq(60)
-
-###########################################
-# List of servos
-###########################################
-servo_list = []
-
-###########################################
 # Platform code
 ###########################################
+p_position = Position()			# Requested position of platform
+p_rotation = Position()			# Requested rotation of platform
 
-DEG2RAD = 180 / mt.pi
-DEG30 = mt.pi / 6
-
-# Zero pos of servos
-zero = np.array([209, 209, 209, 209, 209, 209])
-# Requested position for platform
-arr = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)])
-# Actual degree of rotation of servo arms
-theta_a = np.zeros(6)
-# Current servo positions
-servo_pos = np.zeros(6)
-# Rotation of servo arms in respect to x-axis
-beta = np.array([mt.pi/2, -mt.pi/2, -mt.pi/6, 5*mt.pi/6, -5*mt.pi/6, mt.pi/6])
-# Min/Max servo positions
-ser_min = mt.radians(-80)
-ser_max = mt.radians(80)
-# mulitpler used for conversion radians -> servo pulse
-servo_mult = 400/(mt.pi/4)
-
-###########################################
-###########################################
-#      SIM SPECIFIC - MUST ADJUST         #
-###########################################
-###########################################
-
-# Effective lenth of servo arm
-L1 = 1.57
-# Length of base and platform connecting arm
-L2 = 5.90
-# Height of platform above base
-Z_HOME = 7.54
-# Distance from center of platform to attachment points
-RD = 4.4
-# Distance from center of base to center of servo rotation points
-PD = 5.00
-# Angle between two servo axis points
-THETA_P = mt.radians(37.5)
-# Angle between platform attachment points
-THETA_R = mt.radians(8)
-# Helper variable
-THETA_ANGLE = ((mt.pi/3)-THETA_P)/2.0
-# X-Y Values for Servo rotation points
-P = np.array((
-	[int(-PD * mt.cos(DEG30 - THETA_ANGLE)),
-	int(-PD * mt.cos(DEG30 - THETA_ANGLE)),
-	int(PD * mt.sin(THETA_ANGLE)),
-	int(PD * mt.cos(DEG30 + THETA_ANGLE)),
-	int(PD * mt.cos(DEG30 + THETA_ANGLE)),
-	int(PD * mt.sin(THETA_ANGLE))],
-	[int(-PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(PD * mt.cos(THETA_ANGLE)),
-	int(PD * mt.sin(DEG30 + THETA_ANGLE)),
-	int(-PD * mt.sin(DEG30 - THETA_ANGLE)),
-	int(-PD * mt.cos(THETA_ANGLE))]))
-# X-Y-Z Values of platform attachment points positions
-RE = np.array((
-	[int(-RD * mt.sin(DEG30 + THETA_R/2)),
-	int(-RD * mt.sin(DEG30 + THETA_R/2)),
-	int(-RD * mt.sin(DEG30 - THETA_R/2)),
-	int(RD * mt.cos(THETA_R/2)),
-	int(RD * mt.cos(THETA_R/2)),
-	int(-RD * mt.sin(DEG30 - THETA_R/2))],
-	[int(-RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.cos(DEG30 + THETA_R/2)),
-	int(RD * mt.sin(THETA_R/2)),
-	int(-RD * mt.sin(THETA_R/2)),
-	int(-RD * mt.cos(DEG30 - THETA_R/2))],
-	[0,0,0,0,0,0]))
-	
-# Arrays used for servo rotation calculation
-M = np.zeros((3,3))
-RXP = np.zeros((3,6))
-T = np.zeros(3)
-# Center position of platform
-H = np.array([0, 0, Z_HOME])
-
-###########################################
-# Helper function to calculate needed servo
-#  rotation value
-###########################################
-def getAlpha(i):
-	
-	global beta
-	global P
-
-	n = 0
-	th = 0.0
-	q = np.zeros(3)
-	d1 = np.zeros(3)
-	d12 = 0
-	_min = ser_min
-	_max = ser_max
-	th = theta_a[i]
-	
-	while n < 20:
-
-		# Calculation of position of base attachment point
-		# (Point on servo arm where leg is connected
-		q[0] = L1*mt.cos(th)*mt.cos(beta[i]) + P[0][i]
-		q[1] = L1*mt.cos(th)*mt.sin(beta[i]) + P[1][i]
-		q[2] = L1*mt.sin(th)
-
-		# Calculation of distance between according platform attachment
-		# point and base attachment point
-		d1[0] = RXP[0][i] - q[0]
-		d1[1] = RXP[1][i] - q[1]
-		d1[2] = RXP[2][i] - q[2]
-
-		dl2 = mt.sqrt(d1[0]*d1[0] + d1[1]*d1[1] + d1[2]*d1[2])
-		
-		# If distance is same as leg length, value of theta_a is correct
-		if mt.fabs(L2-d12) < 0.01:
-			return th
-		
-		# If not, split the searched space in half and try again
-		if d12 < L2:
-			_max = th
-		else:
-			_min = th
-
-		n += 1
-		
-		if _max == ser_min or _min == ser_max:
-			return th
-
-		th = _min + (_max-_min) / 2
-	
-	return th
-
-###########################################
-# Function to calculate rotation matrix
-###########################################
-def getMatrix(pe):
-	psi = pe[5]
-	theta = pe[4]
-	phi = pe[3]
-	
-	M[0][0] = mt.cos(psi)*mt.cos(theta)
-	M[1][0] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
-	M[2][0] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
-
-	M[0][1] = mt.sin(psi)*mt.cos(theta)
-	M[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
-	M[2][1] = mt.cos(theta)*mt.sin(phi)
-
-	M[0][2] = -mt.sin(theta)
-	M[1][2] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
-	M[2][2] = mt.cos(theta)*mt.cos(phi)
-
-###########################################
-# Function calculate wanted position of
-# platform attachment points using rot
-# matrix and tranlation vector
-###########################################
-def getRxp(pe):
-	global RE
-		
-	for i in range(6):
-		RXP[0][i] = T[0]+M[0][0]*(RE[0][i])+M[0][1]*(RE[1][i])+M[0][2]*(RE[2][i])
-		RXP[1][i] = T[1]+M[1][0]*(RE[0][i])+M[1][1]*(RE[1][i])+M[1][2]*(RE[2][i])
-		RXP[2][i] = T[2]+M[2][0]*(RE[0][i])+M[2][1]*(RE[1][i])+M[2][2]*(RE[2][i])
+ROT = np.zeros((3,3))			# Rotational matrix
+T = Position()					# Translational matrix
+H = Position()					# Center position of platform
+H.z = Z_HOME
 
 ###########################################
 # Function calculating translation vector
 ###########################################
-def getT(pe):
-	T[0] = pe[0]+H[0]
-	T[1] = pe[1]+H[1]
-	T[2] = pe[2]+H[2]
+def getTransMatrix():
+	
+	T = p_position.add(H)
+    
+###########################################
+# Function calculating rotational matrix
+###########################################
+def getRotMatrix():
+	
+	psi = p_rotation.z		# yaw  - z
+	theta = p_rotation.y	# pitch- y
+	phi = p_rotation.x		# roll - x
+	
+	# Rotational matrix value calculation	
+	ROT[0][0] = mt.cos(psi)*mt.cos(theta)
+	ROT[0][1] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
+	ROT[0][2] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
 
+	ROT[1][0] = mt.sin(psi)*mt.cos(theta)
+	ROT[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
+	ROT[1][2] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
+
+	ROT[2][0] = -mt.sin(theta)
+	ROT[2][1] = -mt.cos(theta)*mt.sin(psi)
+	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
+	
+	#print ROT
+	#print ("\n")
+###########################################
+# Helper function to calculate Q
+###########################################
+def getQandL():
+	
+	for s in SERVO_LIST:
+
+		s.Q.x = T.x + ROT[0][0]*s.P.x + ROT[0][1]*s.P.y + ROT[0][2]*s.P.z
+		s.Q.y = T.y + ROT[1][0]*s.P.x + ROT[1][1]*s.P.y + ROT[1][2]*s.P.z
+		s.Q.z = T.z + ROT[2][0]*s.P.x + ROT[2][1]*s.P.y + ROT[2][2]*s.P.z
+
+		s.L = s.Q.sub(s.B)
+		
+###########################################
+# Helper function to calculate needed servo
+#  rotation value
+###########################################
+def getAlpha():
+
+    for s in SERVO_LIST:
+		
+		L = s.L.magSq() - (mt.pow(LEG_LEN,2) + mt.pow(SERVO_LEN,2))
+		M = 2 * SERVO_LEN * (s.Q.z - s.B.z)
+		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q.x - s.B.x))+(mt.sin(s.beta)*(s.Q.y - s.B.y)))
+	
+		MM = mt.pow(M,2)
+		NN = mt.pow(N,2)
+		D = mt.sqrt(MM+NN)
+		
+		A = mt.asin(mt.radians(L / D)) - mt.atan(mt.radians(N / M))
+		
+		s.alpha = A if s.inverse else (mt.pi - A)
+		
 ###########################################
 # Function to set the postion of servos
 ###########################################
-def setPos(pe):
-	errCount = 0
-	#print pe
-	for i in range(6):
-		getT(pe)
-		getMatrix(pe)
-		getRxp(pe)
-		
-		theta_a[i] = getAlpha(i)
-		print theta_a[i]	
-		if i % 2 == 0:
-			servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
-		else:
-			servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
-		
-	#print servo_pos
-
-	for i in range(6):
-		if theta_a[i] == ser_min or theta_a[i] == ser_max or servo_pos[i] == SERVO_MIN or servo_pos[i]== SERVO_MAX:
-			errCount += 1
-
-
-		servo_list[i].set_pos(i, servo_pos[i])
-
+def Move_Platform():
 	
-	#print servo_pos
-	return errCount
+	getTransMatrix()
+	getRotMatrix()
+	getQandL()
+	getAlpha()
+	
+	for s in SERVO_LIST:
+		#s.set_pos_direct(mt.degrees(s.alpha))	
+		print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
+		#s.B.printPos()
+		#s.P.printPos()	
+		
+	print("\n")		
+
+	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
+	#servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
 	
 ###########################################
 # Helper function to map controller values
@@ -273,63 +161,103 @@ def constrain(val, min_val, max_val):
 # Helper function to initialize all servos
 ###########################################
 def Initialize_Servos():
-  for i in range(6):
-  	if i % 2 == 0:
-  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, False)
-  	else:
-  		servo = Servo(i, PWM, SERVO_MIN, SERVO_MAX, True)
-     
-	print("Initializing Servo {}".format(servo.id))
-	time.sleep(0.25)
-	servo_list.append(servo)
+	
+	PWM.set_pwm_freq(60)
+	
+	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
+		308.0, BASE_DIST,
+		273.1, PLAT_DIST,
+		90, False)
 
-  print("Servos have been initialized...")
-  
+	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
+		352.0, BASE_DIST,
+		 26.9, PLAT_DIST,
+		150, True)
+
+	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
+		 68.0, BASE_DIST,
+		 33.1, PLAT_DIST,
+		330, False)
+	
+	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
+		112.0, BASE_DIST,
+		146.9, PLAT_DIST,
+		30, True)
+
+	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
+		188.0, BASE_DIST,
+		153.1, PLAT_DIST,
+		210, False)
+
+	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
+		232.0, BASE_DIST,
+		266.9, PLAT_DIST,
+		270,  True)
+ 
+	SERVO_LIST.append(s0)
+	SERVO_LIST.append(s1)
+	SERVO_LIST.append(s2)
+	SERVO_LIST.append(s3)
+	SERVO_LIST.append(s4)
+	SERVO_LIST.append(s5)
+ 
+	print("\n###########################################")
+	for s in SERVO_LIST: 
+		print("Initializing Servo {}".format(s.id))
+		s.set_coords(Z_HOME)
+
+		time.sleep(0.25)
+
+	print("Servos have been initialized...")
+	print("###########################################\n")	
+
 ###########################################
-# input 
+# Helper function to initialize controls
+###########################################
+def Initialize_Controls():
+
+	print("\n############################################")
+
+	if DS4.controller_init():
+		print("Controller found...")
+		time.sleep(0.25)
+	else:
+		print("Controller not found...")
+		print("############################################\n")
+		time.sleep(1)
+		sys.exit("Exiting...")
+
+###########################################
+# controls 
 #   Retrieve pitch, roll, yaw values from 
 #   controller input
 ###########################################
-def input(threadname):
+def controls(threadname):
 	global p
 	global r
 	global y
    
-	
-	print("Starting input thread...")
+	print("Starting controls thread...")
 	
 	while True:
+		# Read inputs from controller
 		DS4.read_input()	
 		
-		#Add map handling here
-			
+		# Get pitch, roll, and yaw from controller			
 		p = DS4.control_map['y']
 		r = DS4.control_map['x']
-		y = DS4.control_map['ry']
-			
-		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
+		y = DS4.control_map['rx']
 
-		#print p_mapped, r_mapped, y_mapped
+		# Map values to between +-45 degrees
+		p_mapped = int(map(p * 100, -100, 100, -90, 90))
+		r_mapped = int(map(r * 100, -100, 100, -90, 90))
+		y_mapped = int(map(y * 100, -100, 100, -90, 90))
+		
+		# Assign them to position matrix
+		p_rotation.z = mt.radians(y_mapped)
+		p_rotation.y = mt.radians(p_mapped)
+		p_rotation.x = mt.radians(r_mapped)
 
-	
-		#arr[5] = mt.radians(p_mapped)
-		#arr[4] = mt.radians(r_mapped)
-		#arr[3] = mt.radians(y_mapped)
-
-		#print arr
-###########################################
-# calculate
-#  
-###########################################
-def calculate(threadname):
-    
-	print("Starting calculation thread...")
-    
-	while True:
-		#setPos(arr)
-		pass
 	
 ###########################################
 # main 
@@ -337,60 +265,45 @@ def calculate(threadname):
 ###########################################
 def main():
     
-	print("Starting main thread...")
- 
+	print("Starting main thread...\n...")
+	print("Starting setup...\n...") 
+
 	Initialize_Servos()
-  
-	if (DS4.controller_init()):
-		print("Controller found!")
-		time.sleep(1)
-	else:
-		sys.exit("Controller not found!")
+  	Initialize_Controls()
+	
+	# Setup and start the controls thread
+	controls_thread = Thread(target=controls, args=("controls_thread",))
+	controls_thread.start()
 
-    # add eventlisten
-    # add functionality to only start threads once motion&control button enabled
-    
-	input_thread = Thread(target=input, args=("input_thread",))
-	#calculate_thread = Thread(target=calculate, args=("calculate_thread",))
-    
-	input_thread.start()
-	#calculate_thread.start()
+	PWM.set_pwm_freq(60)	# Set frequency to 60hz
+	motion = False			# Used to track motion status
 
-	# Set frequency to 60hz, good for servos.
-	PWM.set_pwm_freq(60)
-	motion = False
+	print("Setup complete!")
+	print("Press Start to enable Controls & Motion...")
+	time.sleep(1)
+		
 	while True:
-		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p, r, y))
+		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
 		
-		if motion:
-			i = 0
-			for s in servo_list:
-				s.set_pos_direct(i,p)
-				i = i + 1
+		#if motion:
+		# = 0
+		#or s in SERVO_LIST:
+		#	set_pos_direct(i,p)
+		#	i  = i + 1
 		
-		if DS4.control_map['start']:
-			time.sleep(0.122)
-			motion = not motion
-			if motion:
-				print("Start motion")
-			else:
-				print("Stop motion")
-
-		#p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
-		#r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
-		#y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
-
-		#print p_mapped, r_mapped, y_mapped
-
-
-		#arr[5] = mt.radians(y_mapped)
-		#arr[4] = mt.radians(r_mapped)
-		#arr[3] = mt.radians(p_mapped)
-
-		#print arr
+		#if DS4.control_map['start']:
+		#	time.sleep(0.1333)
+		#	motion = not motion
+		#	if motion:
+		#		print("Starting motion...")
+		#	else:
+		#		print("Stoping motion...")
 		
-    	
-		#setPos(arr)
+		#print platform_pos
+		
+		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p_mapped, r_mapped, y_mapped))
+		
+		Move_Platform()
 
 ###########################################
 # Execute main 
