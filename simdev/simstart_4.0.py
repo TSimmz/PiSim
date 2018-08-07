@@ -244,9 +244,9 @@ def controls(threadname):
 		DS4.read_input()	
 		
 		# Get pitch, roll, and yaw from controller			
-		p = DS4.control_map['y']
-		r = DS4.control_map['x']
-		y = DS4.control_map['rx']
+		p = DS4.control_map['ry']
+		r = DS4.control_map['rx']
+		y = DS4.control_map['x']
 
 		# Map values to between +-45 degrees
 		p_mapped = int(map(p * 100, -100, 100, -45, 45))
