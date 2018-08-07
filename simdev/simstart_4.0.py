@@ -249,9 +249,9 @@ def controls(threadname):
 		y = DS4.control_map['rx']
 
 		# Map values to between +-45 degrees
-		p_mapped = int(map(p * 100, -100, 100, -90, 90))
-		r_mapped = int(map(r * 100, -100, 100, -90, 90))
-		y_mapped = int(map(y * 100, -100, 100, -90, 90))
+		p_mapped = int(map(p * 100, -100, 100, -45, 45))
+		r_mapped = int(map(r * 100, -100, 100, -45, 45))
+		y_mapped = int(map(y * 100, -100, 100, -45, 45))
 		
 		# Assign them to position matrix
 		p_rotation.z = mt.radians(y_mapped)

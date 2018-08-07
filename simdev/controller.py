@@ -9,17 +9,16 @@ class Controller:
 		self.jsdev = ''	
 
 		self.control_map = {
-			'start': False,
-			'select': False,
-			'x': 0.0,
-			'y': 0.0,
-			'ry': 0.0,
-			'rx': 0.0,			
+			'start': False,		# motion
+			'select': False,	# autopilot
+			'x': 0.0,			# yaw
+			'y': 0.0,			# vertical
+			'ry': 0.0,			# pitch
+			'rx': 0.0,			# roll
+			'hat0x': 0.0,		# lateral
+			'hat0y': 0.0,		# longitudinal
+								# position reset
 		}
-
-		self.pitch = 0.0
-		self.roll = 0.0
-		self.yaw = 0.0
 
 		self.axis = ''
 		self.axis_map = []
