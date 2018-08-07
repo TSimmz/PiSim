@@ -134,8 +134,9 @@ def Move_Platform():
 	for s in SERVO_LIST:
 		#s.set_pos_direct(mt.degrees(s.alpha))	
 		print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
+		#s.B.printPos()
+		#s.P.printPos()	
 		
-		#print ROT
 	print("\n")		
 
 	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
@@ -166,32 +167,32 @@ def Initialize_Servos():
 	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
 		308.0, BASE_DIST,
 		273.1, PLAT_DIST,
-		0, False)
+		90, False)
 
 	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
 		352.0, BASE_DIST,
 		 26.9, PLAT_DIST,
-		300, True)
+		150, True)
 
 	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
 		 68.0, BASE_DIST,
 		 33.1, PLAT_DIST,
-		120, False)
+		330, False)
 	
 	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
 		112.0, BASE_DIST,
 		146.9, PLAT_DIST,
-		 60, True)
+		30, True)
 
 	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
 		188.0, BASE_DIST,
 		153.1, PLAT_DIST,
-		240, False)
+		210, False)
 
 	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
 		232.0, BASE_DIST,
 		266.9, PLAT_DIST,
-		180,  True)
+		270,  True)
  
 	SERVO_LIST.append(s0)
 	SERVO_LIST.append(s1)

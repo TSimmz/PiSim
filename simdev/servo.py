@@ -59,13 +59,13 @@ class Servo:
 	def set_coords(self, z_height):
 		
 		# Base coordinates
-		self.B.x = int(self.base_dist * mt.sin(self.beta))	# Bx
-		self.B.y = int(self.base_dist * mt.cos(self.beta))	# By		
+		self.B.x = int(self.base_dist * mt.sin(mt.radians(self.base_angle)))	# Bx
+		self.B.y = int(self.base_dist * mt.cos(mt.radians(self.base_angle)))	# By			
 		self.B.z = 0.0										# Bz
 
 		# Platform coordinates
-		self.P.x = int(self.plat_dist * mt.sin(self.beta))	# Px
-		self.P.y = int(self.plat_dist * mt.cos(self.beta))	# Py
+		self.P.x = int(self.plat_dist * mt.sin(mt.radians(self.plat_angle)))	# Px
+		self.P.y = int(self.plat_dist * mt.cos(mt.radians(self.plat_angle)))	# Py
 		self.P.z = z_height									# Pz
 
 	###############################################################

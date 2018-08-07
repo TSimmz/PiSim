@@ -17,3 +17,5 @@ class Position():
 	def magSq(self):
 		return mt.pow(self.x, 2) + mt.pow(self.y, 2) + mt.pow(self.z, 2)	
 	
+	def printPos(self):
+		print("[{}, {}, {}]".format(self.x, self.y, self.z))	
