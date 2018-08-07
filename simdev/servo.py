@@ -5,6 +5,8 @@ from __future__ import division
 import time
 import numpy as np
 import math as mt
+from position import Position
+
 import Adafruit_PCA9685
 
 
@@ -28,11 +30,13 @@ class Servo:
 		
 		self.base_angle = base_angle
 		self.base_dist = base_dist
-		self.base_coords = np.zeros((3,1))
+		
+		self.B = Position()
 	
 		self.plat_angle = plat_angle
 		self.plat_dist = plat_dist
-		self.plat_coords = np.zeros((3,1))				
+		
+		self.P = Position()				
 	
 		self.inverse = inverse
 		
@@ -43,11 +47,11 @@ class Servo:
 		self.alpha = 0.0	
 		self.beta = mt.radians(b_deg)
 		
-		self.Q = np.zeros((3,1))
-		self.L = np.zeros((3,1))
+		self.Q = Position()
+		self.L = Position()
 	
-		self._min = 0 if self.inverse else 175
-		self._max = 5 if self.inverse else 180 			
+		self._min = -90 if self.inverse else 90
+		self._max = 90 if self.inverse else 270 			
 
 	###############################################################
 	# Calculates X,Y,Z coordinates of base and platform points
@@ -55,14 +59,14 @@ class Servo:
 	def set_coords(self, z_height):
 		
 		# Base coordinates
-		self.base_coords[0,0] = int(self.base_dist * mt.sin(self.beta))	# Bx
-		self.base_coords[1,0] = int(self.base_dist * mt.cos(self.beta))	# By		
-		self.base_coords[2,0] = 0										# Bz
+		self.B.x = int(self.base_dist * mt.sin(self.beta))	# Bx
+		self.B.y = int(self.base_dist * mt.cos(self.beta))	# By		
+		self.B.z = 0.0										# Bz
 
 		# Platform coordinates
-		self.plat_coords[0,0] = int(self.plat_dist * mt.sin(self.beta))	# Px
-		self.plat_coords[1,0] = int(self.plat_dist * mt.cos(self.beta))	# Py
-		self.plat_coords[2,0] = z_height								# Pz
+		self.P.x = int(self.plat_dist * mt.sin(self.beta))	# Px
+		self.P.y = int(self.plat_dist * mt.cos(self.beta))	# Py
+		self.P.z = z_height									# Pz
 
 	###############################################################
 	# Sets position of servos directly from controller (testing)

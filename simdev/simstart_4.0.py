@@ -4,6 +4,7 @@ from __future__ import division
 import sys
 from serial import Serial
 from threading import Thread
+from position import Position
 from controller import Controller
 from servo import Servo
 
@@ -48,49 +49,58 @@ DS4 = Controller()
 ###########################################
 # Platform code
 ###########################################
-platform_pos = np.array([0.0, 0.0, 0.0, mt.radians(0), mt.radians(0), mt.radians(0)]) # Requested position of platform
+p_position = Position()			# Requested position of platform
+p_rotation = Position()			# Requested rotation of platform
 
 ROT = np.zeros((3,3))			# Rotational matrix
-T = np.zeros((3,1))				# Translational matrix
-H = np.zeros((3,1))				# Center position of platform
-H[2][0] = Z_HOME
+T = Position()					# Translational matrix
+H = Position()					# Center position of platform
+H.z = Z_HOME
 
 ###########################################
 # Function calculating translation vector
 ###########################################
 def getTransMatrix():
 	
-	T[0][0] = platform_pos[0]+H[0][0]
-	T[1][0] = platform_pos[1]+H[1][0]
-	T[2][0] = platform_pos[2]+H[2][0]
+	T = p_position.add(H)
     
-	#print T
-
 ###########################################
 # Function calculating rotational matrix
 ###########################################
 def getRotMatrix():
 	
-	psi = platform_pos[5]		# yaw
-	theta = platform_pos[4]		# pitch
-	phi = platform_pos[3]		# roll
+	psi = p_rotation.z		# yaw  - z
+	theta = p_rotation.y	# pitch- y
+	phi = p_rotation.x		# roll - x
 	
 	# Rotational matrix value calculation	
 	ROT[0][0] = mt.cos(psi)*mt.cos(theta)
-	ROT[1][0] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
-	ROT[2][0] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
+	ROT[0][1] = -mt.sin(psi)*mt.cos(phi)+mt.cos(psi)*mt.sin(theta)*mt.sin(phi)
+	ROT[0][2] = mt.sin(psi)*mt.sin(phi)+mt.cos(psi)*mt.cos(phi)*mt.sin(theta)
 
-	ROT[0][1] = mt.sin(psi)*mt.cos(theta)
+	ROT[1][0] = mt.sin(psi)*mt.cos(theta)
 	ROT[1][1] = mt.cos(psi)*mt.cos(phi)+mt.sin(psi)*mt.sin(theta)*mt.sin(phi)
-	ROT[2][1] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
+	ROT[1][2] = -mt.cos(psi)*mt.sin(phi)+mt.sin(psi)*mt.sin(theta)*mt.cos(phi)
 
-	ROT[0][2] = -mt.sin(theta)
-	ROT[1][2] = -mt.cos(theta)*mt.sin(psi)
+	ROT[2][0] = -mt.sin(theta)
+	ROT[2][1] = -mt.cos(theta)*mt.sin(psi)
 	ROT[2][2] = mt.cos(theta)*mt.cos(phi)
 	
 	#print ROT
 	#print ("\n")
+###########################################
+# Helper function to calculate Q
+###########################################
+def getQandL():
+	
+	for s in SERVO_LIST:
 
+		s.Q.x = T.x + ROT[0][0]*s.P.x + ROT[0][1]*s.P.y + ROT[0][2]*s.P.z
+		s.Q.y = T.y + ROT[1][0]*s.P.x + ROT[1][1]*s.P.y + ROT[1][2]*s.P.z
+		s.Q.z = T.z + ROT[2][0]*s.P.x + ROT[2][1]*s.P.y + ROT[2][2]*s.P.z
+
+		s.L = s.Q.sub(s.B)
+		
 ###########################################
 # Helper function to calculate needed servo
 #  rotation value
@@ -98,12 +108,10 @@ def getRotMatrix():
 def getAlpha():
 
     for s in SERVO_LIST:
-		s.Q = np.add(T, np.matmul(ROT, s.plat_coords))
-		s.L = np.subtract(s.Q, s.base_coords)
-
-		L = mt.pow(np.linalg.norm(s.L),2) - (mt.pow(LEG_LEN,2) + mt.pow(SERVO_LEN,2))
-		M = 2 * SERVO_LEN * (s.Q[2][0] - s.base_coords[2,0])
-		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q[0][0] - s.base_coords[0][0]))+(mt.sin(s.beta)*(s.Q[1][0] - s.base_coords[1][0])))
+		
+		L = s.L.magSq() - (mt.pow(LEG_LEN,2) + mt.pow(SERVO_LEN,2))
+		M = 2 * SERVO_LEN * (s.Q.z - s.B.z)
+		N = 2 * SERVO_LEN * ((mt.cos(s.beta)*(s.Q.x - s.B.x))+(mt.sin(s.beta)*(s.Q.y - s.B.y)))
 	
 		MM = mt.pow(M,2)
 		NN = mt.pow(N,2)
@@ -120,29 +128,15 @@ def Move_Platform():
 	
 	getTransMatrix()
 	getRotMatrix()
+	getQandL()
 	getAlpha()
 	
 	for s in SERVO_LIST:
 		#s.set_pos_direct(mt.degrees(s.alpha))	
-		#print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
-		print("Q = "),
-		print T,
-		print(" + "),
-		print ROT,
-		print(" * "),
-		print s.plat_coords,
-		print("\n") 
-
-#	alpha_list = [
-#		mt.degrees(SERVO_LIST[0].alpha),
-#		mt.degrees(SERVO_LIST[1].alpha),
-#		mt.degrees(SERVO_LIST[2].alpha),
-#		mt.degrees(SERVO_LIST[3].alpha),
-#		mt.degrees(SERVO_LIST[4].alpha),
-#		mt.degrees(SERVO_LIST[5].alpha),
-#	]
-#
-#	print alpha_list
+		print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
+		
+		#print ROT
+	print("\n")		
 
 	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
 	#servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
@@ -233,12 +227,6 @@ def Initialize_Controls():
 		sys.exit("Exiting...")
 
 ###########################################
-# Helper function to initialize variables
-###########################################
-def Initialize_Vars():
-	pass			
-	
-###########################################
 # controls 
 #   Retrieve pitch, roll, yaw values from 
 #   controller input
@@ -248,7 +236,6 @@ def controls(threadname):
 	global r
 	global y
    
-	
 	print("Starting controls thread...")
 	
 	while True:
@@ -266,9 +253,9 @@ def controls(threadname):
 		y_mapped = int(map(y * 100, -100, 100, -90, 90))
 		
 		# Assign them to position matrix
-		platform_pos[5] = mt.radians(y_mapped)
-		platform_pos[4] = mt.radians(p_mapped)
-		platform_pos[3] = mt.radians(r_mapped)
+		p_rotation.z = mt.radians(y_mapped)
+		p_rotation.y = mt.radians(p_mapped)
+		p_rotation.x = mt.radians(r_mapped)
 
 	
 ###########################################
@@ -292,7 +279,7 @@ def main():
 
 	print("Setup complete!")
 	print("Press Start to enable Controls & Motion...")
-	time.sleep(0.25)
+	time.sleep(1)
 		
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
