@@ -167,32 +167,32 @@ def Initialize_Servos():
 	s0 = Servo(PWM, 0, SERVO_MIN, SERVO_MAX,
 		308.0, BASE_DIST,
 		273.1, PLAT_DIST,
-		90, False)
+		0, False)
 
 	s1 = Servo(PWM, 1, SERVO_MIN, SERVO_MAX,
 		352.0, BASE_DIST,
 		 26.9, PLAT_DIST,
-		150, True)
+		300, True)
 
 	s2 = Servo(PWM, 2, SERVO_MIN, SERVO_MAX, 
 		 68.0, BASE_DIST,
 		 33.1, PLAT_DIST,
-		330, False)
+		120, False)
 	
 	s3 = Servo(PWM, 3, SERVO_MIN, SERVO_MAX,
 		112.0, BASE_DIST,
 		146.9, PLAT_DIST,
-		30, True)
+		60, True)
 
 	s4 = Servo(PWM, 4, SERVO_MIN, SERVO_MAX,
 		188.0, BASE_DIST,
 		153.1, PLAT_DIST,
-		210, False)
+		240, False)
 
 	s5 = Servo(PWM, 5, SERVO_MIN, SERVO_MAX,
 		232.0, BASE_DIST,
 		266.9, PLAT_DIST,
-		270,  True)
+		180,  True)
  
 	SERVO_LIST.append(s0)
 	SERVO_LIST.append(s1)
