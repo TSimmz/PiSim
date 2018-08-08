@@ -1,45 +1,52 @@
 #!/usr/bin/python
 
-#########################################
-# Rotate pitch between min and max
-#########################################
-def pitch():
-	pass
+import time
+from position import Position
 
-#########################################
-# Rotate roll between min and max
-#########################################
-def roll():
-	pass
+class Autopilot():
+	def __init__(self, dist, home):
+		self.dist = dist
+		self.home = home
 
-#########################################
-# Rotate yaw between min and max
-#########################################
-def yaw():
-	pass
+	#########################################
+	# Rotate pitch between min and max
+	#########################################
+	def pitch(self):
+		pass
 
-#########################################
-# Translate z-axis between min and max
-#########################################
-def bounce():
-	pass
+	#########################################
+	# Rotate roll between min and max
+	#########################################
+	def roll(self):
+		pass
 
-#########################################
-# Translate x-axis between min and max
-#########################################
-def lateral():
-	pass
+	#########################################
+	# Rotate yaw between min and max
+	#########################################
+	def yaw(self):
+		pass
 
-#########################################
-# Translate y-axis between min and max
-#########################################
-def longitude():
-	pass
-
-#########################################
-# Translate in a circle at Z_home
-#########################################
-def circle_path():
-	pass
-
-
+	#########################################
+	# Translate z-axis between min and max
+	#########################################
+	def bounce(self):
+		pass
+	#########################################
+	# Translate x-axis between min and max
+	#########################################
+	def lateral(self):
+		pass
+	
+	#########################################
+	# Translate y-axis between min and max
+	#########################################
+	def longitude(self):
+		pass
+	
+	#########################################
+	# Translate in a circle at Z_home
+	#########################################
+	def circle_path(self):
+		pass
+	
+		

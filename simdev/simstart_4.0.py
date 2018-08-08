@@ -1,18 +1,17 @@
 #!/usr/bin/python
 from __future__ import division
 
-import sys
 from serial import Serial
 from threading import Thread
 from position import Position
 from controller import Controller
 from servo import Servo
+from autopilot import Autopilot
 
+import sys
 import numpy as np
 import math as mt
-import autopilot as auto
 import time
-
 import Adafruit_PCA9685
 
 ###########################################
@@ -56,6 +55,11 @@ ROT = np.zeros((3,3))			# Rotational matrix
 T = Position()					# Translational matrix
 H = Position()					# Center position of platform
 H.z = Z_HOME
+MAX_T = Position(50, 50, 50)
+###########################################
+# Create Autopilot object
+###########################################
+AUTO = Autopilot(MAX_T, H)
 
 ###########################################
 # Function calculating translation vector
@@ -132,12 +136,12 @@ def Move_Platform():
 	getAlpha()
 	
 	for s in SERVO_LIST:
-		#s.set_pos_direct(mt.degrees(s.alpha))	
-		print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
+		s.set_pos_direct(mt.degrees(s.alpha))	
+		#print("ID {} => {} ".format(s.id, mt.degrees(s.alpha))),
 		#s.B.printPos()
 		#s.P.printPos()	
 		
-	print("\n")		
+	#print("\n")		
 
 	#servo_pos[i] = constrain(zero[i] - (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)
 	#servo_pos[i] = constrain(zero[i] + (theta_a[i])*servo_mult, SERVO_MIN, SERVO_MAX)				
@@ -258,7 +262,14 @@ def controls(threadname):
 		p_rotation.y = mt.radians(p_mapped)
 		p_rotation.x = mt.radians(r_mapped)
 
+
+def motions(threadname):
 	
+	print("Starting motion thread...")
+	
+	while True:
+		Move_Platform()
+
 ###########################################
 # main 
 #   initialize child threads
@@ -273,14 +284,17 @@ def main():
 	
 	# Setup and start the controls thread
 	controls_thread = Thread(target=controls, args=("controls_thread",))
+	motion_thread = Thread(target=motions, args=("motion_thread",))	
+
 	controls_thread.start()
+	motion_thread.start()
 
 	PWM.set_pwm_freq(60)	# Set frequency to 60hz
 	motion = False			# Used to track motion status
 
 	print("Setup complete!")
 	print("Press Start to enable Controls & Motion...")
-	time.sleep(1)
+	time.sleep(2)
 		
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
@@ -302,9 +316,15 @@ def main():
 		#print platform_pos
 		
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p_mapped, r_mapped, y_mapped))
-		
-		Move_Platform()
+		for i in range(40):
+			H.z += 1
+			time.sleep(.1)		
 
+		for i in range(40):
+			H.z -= 1
+			time.sleep(.1)
+			
+		
 ###########################################
 # Execute main 
 ###########################################
