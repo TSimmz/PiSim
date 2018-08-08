@@ -17,9 +17,14 @@ import Adafruit_PCA9685
 ###########################################
 # initialize global variables
 ###########################################
-p = 0.0
-r = 0.0
-y = 0.0
+p = 0.0 			# pitch
+r = 0.0				# roll 
+y = 0.0				# yaw
+vrt = 0.0			# vertical
+lon = 0.0			# longitudinal
+lat = 0.0			# lateral
+motion = False
+autopilot = False
 
 ###########################################
 # Constants (measurements in mm)
@@ -252,10 +257,17 @@ def controls(threadname):
 		r = DS4.control_map['rx']
 		y = DS4.control_map['x']
 
+		vrt = DS4.control_map['y']
+		lon = DS4.control_map['hat0y']
+		lat = DS4.control_map['hat0x']
+
+		motion = DS4.control_map['start']
+		autopilot = DS4.control_map['select']
+
 		# Map values to between +-45 degrees
-		p_mapped = int(map(p * 100, -100, 100, -45, 45))
-		r_mapped = int(map(r * 100, -100, 100, -45, 45))
-		y_mapped = int(map(y * 100, -100, 100, -45, 45))
+		p_mapped = int(map(p * 1000, -1000, 1000, -45, 45))
+		r_mapped = int(map(r * 1000, -1000, 1000, -45, 45))
+		y_mapped = int(map(y * 1000, -1000, 1000, -45, 45))
 		
 		# Assign them to position matrix
 		p_rotation.z = mt.radians(y_mapped)
@@ -263,6 +275,10 @@ def controls(threadname):
 		p_rotation.x = mt.radians(r_mapped)
 
 
+###########################################
+# motions
+#   thread to run the motion calculations
+###########################################
 def motions(threadname):
 	
 	print("Starting motion thread...")
@@ -290,18 +306,17 @@ def main():
 	motion_thread.start()
 
 	PWM.set_pwm_freq(60)	# Set frequency to 60hz
-	motion = False			# Used to track motion status
 
 	print("Setup complete!")
 	print("Press Start to enable Controls & Motion...")
-	time.sleep(2)
+	time.sleep(1)
 		
 	while True:
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
 		
 		#if motion:
-		# = 0
-		#or s in SERVO_LIST:
+		#i = 0
+		#for s in SERVO_LIST:
 		#	set_pos_direct(i,p)
 		#	i  = i + 1
 		
@@ -312,17 +327,6 @@ def main():
 		#		print("Starting motion...")
 		#	else:
 		#		print("Stoping motion...")
-		
-		#print platform_pos
-		
-		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}".format(p_mapped, r_mapped, y_mapped))
-		for i in range(40):
-			H.z += 1
-			time.sleep(.1)		
-
-		for i in range(40):
-			H.z -= 1
-			time.sleep(.1)
 			
 		
 ###########################################
