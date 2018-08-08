@@ -245,7 +245,12 @@ def controls(threadname):
 	global p
 	global r
 	global y
-   
+  	global vrt
+	global lon
+	global lat
+	global motion
+	global autopilot
+ 
 	print("Starting controls thread...")
 	
 	while True:
