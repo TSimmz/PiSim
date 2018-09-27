@@ -317,6 +317,7 @@ def main():
 	time.sleep(1)
 		
 	while True:
+		pass
 		#print("Pitch: {:>6.3f}  Roll: {:>6.3f}  Yaw:{:>6.3f}\r".format(p, r, y)),
 		
 		#if motion:

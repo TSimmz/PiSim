@@ -5,8 +5,16 @@ from position import Position
 
 class Autopilot():
 	def __init__(self, dist, home):
+		self.new = Position()
+		
 		self.dist = dist
 		self.home = home
+	
+	#########################################
+	# Resets to start position
+	#########################################
+	def reset(self):
+		self.new = Position()
 
 	#########################################
 	# Rotate pitch between min and max
